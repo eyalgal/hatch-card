@@ -1,5 +1,15 @@
 # 🌙 Hatch Card for Home Assistant
+[![GitHub Release][release_badge]][release]
+[![Buy Me A Coffee][bmac_badge]][bmac]
+<!--[![Community Forum][forum_badge]][forum] -->
 
+<!-- Link references -->
+[release_badge]: https://img.shields.io/github/v/release/eyalgal/hatch-card
+[release]: https://github.com/eyalgal/hatch-card/releases
+[forum_badge]: https://img.shields.io/badge/Community-Forum-5294E2.svg
+<!--[forum]: https://community.home-assistant.io/t/shopping-list-card-a-simple-card-for-quick-adding-items-to-any-to-do-list/905005-->
+[bmac_badge]: https://img.shields.io/badge/buy_me_a-coffee-yellow
+[bmac]: https://www.buymeacoffee.com/eyalgal
 A sleek, modern, and highly customizable Lovelace card to control your Hatch Rest devices in Home Assistant. This card combines light and media player controls into a single, intuitive interface.
 
  [](https://github.com/hacs/integration)
@@ -172,3 +182,9 @@ hold_action:
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
+
+### ❤️ Support
+
+If you find this card useful and would like to show your support, you can buy me a coffee:
+
+<a href="https://coff.ee/eyalgal" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>

@@ -38,34 +38,21 @@ A sleek, modern, and highly customizable Lovelace card to control your Hatch Res
 
 ## 🚀 Installation
 
-### HACS (Recommended)
+### HACS
 
-1.  Navigate to HACS \> Frontend.
-2.  Click the three dots in the top right and select **Custom Repositories**.
-3.  Add the URL to this repository and select the category **Lovelace**.
-4.  Click the **+ EXPLORE & ADD REPOSITORIES** button and search for "Hatch Card".
-5.  Click **Install** and then follow the on-screen instructions.
-6.  Add the card to your Lovelace dashboard.
+Shopping List Card is available in [HACS](https://hacs.xyz/) (Home Assistant Community Store).
 
-```yaml
-resources:
-  - url: /hacsfiles/hatch-card/hatch-card.js
-    type: module
-```
+Use this link to directly go to the repository in HACS:
 
-### Manual Installation
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=eyalgal&repository=hatch-card)
 
-1.  Download the `hatch-card.js` file from the [latest release](https://www.google.com/search?q=https://github.com/eyalgal/hatch-card/releases).
-2.  Upload the file to your Home Assistant `config/www` folder.
-3.  Add the resource to your Lovelace configuration.
+_or_
 
-<!-- end list -->
+1. Install HACS if you don't have it already  
+2. Open HACS in Home Assistant  
+3. Search for "Hatch Card"  
+4. Click the download button. ⬇️
 
-```yaml
-resources:
-  - url: /local/hatch-card.js
-    type: module
-```
 
 ## Configuration
 
@@ -158,6 +145,40 @@ show_brightness_control: true
 show_sound_control: true
 show_timer: true
 volume_presets: [0.25, 0.5, 0.75, 1.0]
+```
+
+### Minimalist Nightstand Control
+
+Perfect for a phone dashboard or small tablet. This compact vertical card uses scenes for the two most common states: 'White Noise' and 'Off'. The main icon still allows you to toggle the last state on and off, and volume controls are always visible for quick adjustments.
+
+<img width="400" alt="'Minimalist Nightstand Control' Control Center" src="https://github.com/user-attachments/assets/102f6460-e555-4429-afd8-b76d4f89f930" />
+
+```yaml
+type: custom:hatch-card
+light_entity: light.dean_s_hatch_light
+media_player_entity: media_player.dean_s_hatch_media_player
+name: Johnny's Hatch
+show_expand_button: true
+show_scenes: true
+show_brightness_control: true
+show_sound_control: true
+scenes_per_row: 3
+scenes:
+  - name: Reading
+    icon: mdi:book-open-page-variant
+    brightness: 40
+    turn_off_media: true
+    color: white
+  - name: Sleep
+    icon: mdi:weather-night
+    color: red
+    brightness: 5
+    sound_mode: WhiteNoise
+    volume: 35
+  - name: "Off"
+    icon: mdi:power-off
+    turn_off_light: true
+    turn_off_media: true
 ```
 
 ## Actions

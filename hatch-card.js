@@ -113,7 +113,12 @@ function parseColorInput(input) {
     // Check if it's RGB format
     const rgbMatch = trimmed.match(/^\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*$/);
     if (rgbMatch) {
-        return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
+        const r = parseInt(rgbMatch[1]);
+        const g = parseInt(rgbMatch[2]);
+        const b = parseInt(rgbMatch[3]);
+        if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+            return [r, g, b];
+        }
     }
     
     return null;
@@ -501,7 +506,7 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
                                 <button 
                                     class="scene-button"
                                     @click="${() => this._activateScene(scene)}"
-                                    
+									aria-label="${scene.name || 'Scene'}"
                                     style="--scene-color: ${scene.color ? (Array.isArray(scene.color) ? `rgb(${scene.color.join(',')})` : scene.color) : lightColor}"
                                 >
                                     <ha-icon icon="${scene.icon || 'mdi:palette'}"></ha-icon>
@@ -1196,6 +1201,11 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
                 text-align: center;
                 color: var(--secondary-text-color);
             }
+
+			.volume-button:active {
+				transform: scale(0.95);
+				opacity: 0.8;
+			}
             
             /* Expand Button */
             .expand-button {
@@ -1464,36 +1474,39 @@ class HatchCardEditor extends LitElement {
         this.requestUpdate();
     }
 
-    _valueChanged(e) {
-        if (!this._config || !this.hass) {
-            return;
-        }
-        const target = e.target;
-        const newConfig = { ...this._config };
-        let key = target.id || target.getAttribute('key');
-        let value;
+	_valueChanged(e) {
+		if (!this._config || !this.hass) {
+			return;
+		}
+		const target = e.target;
+		const newConfig = { ...this._config };
+		let key = target.id || target.getAttribute('key');
+		let value;
 
-        if (target.tagName === 'HA-SWITCH') {
-            value = target.checked;
-        } else if (target.tagName === 'HA-SELECT') {
-            value = e.detail?.value || target.value;
-        } else if (key === 'volume_presets') {
-            value = target.value.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v) && v >= 0 && v <= 1);
-            if (value.length === 0) value = null;
-        } else if (key === 'timer_presets') {
-            value = target.value.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v) && v > 0);
-            if (value.length === 0) value = [15, 30, 60, 120];
-        } else if (key === 'timer_action_light_color') {
-            value = parseColorInput(target.value);
-        } else if (key.startsWith('timer_action_') && (key.endsWith('_brightness') || key.endsWith('_volume'))) {
-            const numValue = parseInt(target.value);
-            value = (!isNaN(numValue) && numValue >= 0 && numValue <= 100) ? numValue : null;
-        } else if (key === 'scenes_per_row') {
-            const numValue = parseInt(target.value);
-            value = (!isNaN(numValue) && numValue >= 1 && numValue <= 8) ? numValue : 4;
-        } else {
-            value = target.value;
-        }
+		if (target.tagName === 'HA-SWITCH') {
+			value = target.checked;
+		} else if (target.tagName === 'HA-SELECT') {
+			value = e.detail?.value || target.value;
+		} else if (target.tagName === 'HA-ICON-PICKER') {
+			// Handle icon picker specifically
+			value = e.detail?.value || '';
+		} else if (key === 'volume_presets') {
+			value = target.value.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v) && v >= 0 && v <= 1);
+			if (value.length === 0) value = null;
+		} else if (key === 'timer_presets') {
+			value = target.value.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v) && v > 0);
+			if (value.length === 0) value = [15, 30, 60, 120];
+		} else if (key === 'timer_action_light_color') {
+			value = parseColorInput(target.value);
+		} else if (key.startsWith('timer_action_') && (key.endsWith('_brightness') || key.endsWith('_volume'))) {
+			const numValue = parseInt(target.value);
+			value = (!isNaN(numValue) && numValue >= 0 && numValue <= 100) ? numValue : null;
+		} else if (key === 'scenes_per_row') {
+			const numValue = parseInt(target.value);
+			value = (!isNaN(numValue) && numValue >= 1 && numValue <= 8) ? numValue : 4;
+		} else {
+			value = target.value;
+		}
         
         const defaults = {
             background_mode: 'full',
@@ -1568,21 +1581,24 @@ class HatchCardEditor extends LitElement {
         this.dispatchEvent(event);
     }
 
-    _updateScene(e, index, field) {
-        const newConfig = { ...this._config };
-        const newScenes = structuredClone(this._config.scenes || []);
-        const sceneToUpdate = newScenes[index];
+	_updateScene(e, index, field) {
+		const newConfig = { ...this._config };
+		const newScenes = structuredClone(this._config.scenes || []);
+		const sceneToUpdate = newScenes[index];
 
-        let value;
-        const target = e.target;
+		let value;
+		const target = e.target;
 
-        if (target.tagName === 'HA-SWITCH') {
-            value = target.checked;
-        } else if (target.tagName === 'HA-SELECT') {
-            value = e.detail?.value ?? target.value;
-        } else {
-            value = target.value;
-        }
+		if (target.tagName === 'HA-SWITCH') {
+			value = target.checked;
+		} else if (target.tagName === 'HA-SELECT') {
+			value = e.detail?.value ?? target.value;
+		} else if (target.tagName === 'HA-ICON-PICKER') {
+			// Handle icon picker
+			value = e.detail?.value || '';
+		} else {
+			value = target.value;
+		}
         
         // --- Special Parsing for certain fields ---
         if (field === 'color') {
@@ -1697,13 +1713,13 @@ class HatchCardEditor extends LitElement {
                         `)}
                     </ha-select>
                     
-                    <ha-textfield
-                        id="icon"
-                        label="Default Icon (Optional)"
-                        .value="${this._config?.icon || ''}"
-                        @input="${this._valueChanged}"
-                        placeholder="mdi:speaker"
-                    ></ha-textfield>
+					<ha-icon-picker
+						id="icon"
+						label="Default Icon (Optional)"
+						.value="${this._config?.icon || ''}"
+						@value-changed="${this._valueChanged}"
+						.placeholder="${'mdi:speaker'}"
+					></ha-icon-picker>
                     
                     <ha-textfield
                         id="user_photo"
@@ -2051,12 +2067,12 @@ class HatchCardEditor extends LitElement {
                                                 placeholder="Scene name"
                                             ></ha-textfield>
                                             
-                                            <ha-textfield
-                                                label="Icon"
-                                                .value="${scene.icon || ''}"
-                                                @input="${(e) => this._updateScene(e, index, 'icon')}"
-                                                placeholder="mdi:palette"
-                                            ></ha-textfield>
+											<ha-icon-picker
+												label="Icon"
+												.value="${scene.icon || ''}"
+												@value-changed="${(e) => this._updateScene(e, index, 'icon')}"
+												.placeholder="${'mdi:palette'}"
+											></ha-icon-picker>
                                             
                                             <div class="subsection-title">Option 1: Activate HA Scene</div>
                                             <ha-select

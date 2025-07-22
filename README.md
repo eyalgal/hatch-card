@@ -40,7 +40,7 @@ A sleek, modern, and highly customizable Lovelace card to control your Hatch Res
 
 ### HACS
 
-Shopping List Card is available in [HACS](https://hacs.xyz/) (Home Assistant Community Store).
+Hatch Card is available in [HACS](https://hacs.xyz/) (Home Assistant Community Store).
 
 Use this link to directly go to the repository in HACS:
 

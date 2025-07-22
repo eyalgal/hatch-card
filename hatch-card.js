@@ -13,7 +13,7 @@ import {
     css
 } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
 
-const cardVersion = "1.1.0"; 
+const cardVersion = "1.1.1"; 
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {
@@ -132,7 +132,9 @@ class HatchCard extends LitElement {
             _config: {},
             _timerEnd: { type: Number },
             _timerRemaining: { type: String },
+			_timerPercent: { type: Number },
             _showControls: { type: Boolean },
+			
         };
     }
 
@@ -140,12 +142,14 @@ class HatchCard extends LitElement {
         super();
         this._timerEnd = null;
         this._timerRemaining = '';
+		this._timerPercent = 0;
         this._showControls = false;
         this._timerInterval = null;
         this._holdTimer = null;
         this._tapTimer = null;
         this._tapCount = 0;
 		this._userProvidedIcon = null;
+		this._timerDuration = null;
     }
 
     setConfig(config) {
@@ -229,26 +233,35 @@ class HatchCard extends LitElement {
         }
     }
 
-    _updateTimer() {
-        if (!this._timerEnd) {
-            this._timerRemaining = '';
-            return;
-        }
+	_updateTimer() {
+		if (!this._timerEnd) {
+			this._timerRemaining = '';
+			this._timerPercent = 0;
+			this.requestUpdate();
+			return;
+		}
 
-        const now = Date.now();
-        const remaining = Math.max(0, this._timerEnd - now);
-        
-        if (remaining === 0) {
-            this._timerEnd = null;
-            this._timerRemaining = '';
-            this._executeTimerActions();
-            return;
-        }
+		const now = Date.now();
+		const remaining = Math.max(0, this._timerEnd - now);
+		
+		if (remaining === 0) {
+			this._timerEnd = null;
+			this._timerRemaining = '';
+			this._timerPercent = 0;
+			this._executeTimerActions();
+			this.requestUpdate();
+			return;
+		}
 
-        const minutes = Math.floor(remaining / 60000);
-        const seconds = Math.floor((remaining % 60000) / 1000);
-        this._timerRemaining = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    }
+		const totalDuration = this._timerDuration || 60000;
+		this._timerPercent = (remaining / totalDuration) * 100;
+		
+		const minutes = Math.floor(remaining / 60000);
+		const seconds = Math.floor((remaining % 60000) / 1000);
+		this._timerRemaining = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+		
+		this.requestUpdate();
+	}
 
 render() {
         if (!this.hass || !this._config) {
@@ -538,20 +551,64 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
         }
     }
 
-    _renderIconOrPhoto(isOn, lightColorStyle, activeIcon, isVertical = false) {
-        if (this._config.user_photo) {
-            return html `<img class="user-photo ${isVertical ? 'vertical' : ''}" src="${this._config.user_photo}" alt="${this._config.name || 'User'}" />`;
-        }
-        
-        const shapeStyle = `background-color: ${isOn ? lightColorStyle.replace('rgb', 'rgba').replace(')', ', 0.2)') : 'rgba(var(--rgb-primary-text-color), 0.05)'};`;
-        const iconStyle = `color: ${isOn ? lightColorStyle : 'var(--primary-text-color, var(--paper-item-icon-color))'};`;
+	_renderIconOrPhoto(isOn, lightColorStyle, activeIcon, isVertical = false) {
+		if (this._config.user_photo) {
+			return html `<img class="user-photo ${isVertical ? 'vertical' : ''}" src="${this._config.user_photo}" alt="${this._config.name || 'User'}" />`;
+		}
+		
+		const shapeStyle = `background-color: ${isOn ? lightColorStyle.replace('rgb', 'rgba').replace(')', ', 0.2)') : 'rgba(var(--rgb-primary-text-color), 0.05)'};`;
+		const iconStyle = `color: ${isOn ? lightColorStyle : 'var(--primary-text-color, var(--paper-item-icon-color))'};`;
 
-        return html `
-            <div class="shape ${isVertical ? 'vertical' : ''}" style="${shapeStyle}">
-                <ha-icon .icon="${activeIcon}" style="${iconStyle}"></ha-icon>
-            </div>
-        `;
-    }
+		const size = isVertical ? 48 : 42;
+		const strokeWidth = 3;
+		const svgSize = size + strokeWidth * 2;
+		const center = svgSize / 2;
+		const radius = (size / 2) + (strokeWidth / 2); 
+		const circumference = radius * 2 * Math.PI;
+		const strokeDashoffset = circumference - (this._timerPercent / 100) * circumference;
+		
+		const timerRing = this._timerPercent > 0 ? html`
+			<svg 
+				style="
+					position: absolute; 
+					top: -${strokeWidth}px; 
+					left: -${strokeWidth}px; 
+					width: ${svgSize}px; 
+					height: ${svgSize}px; 
+					transform: rotate(-90deg); 
+					pointer-events: none;
+				"
+			>
+				<!-- Background track -->
+				<circle
+					stroke="rgba(var(--rgb-primary-text-color), 0.1)"
+					fill="transparent"
+					stroke-width="${strokeWidth}"
+					r="${radius}"
+					cx="${center}"
+					cy="${center}"
+				/>
+				<!-- Timer progress -->
+				<circle
+					stroke="${lightColorStyle}"
+					fill="transparent"
+					stroke-width="${strokeWidth}"
+					stroke-dasharray="${circumference} ${circumference}"
+					style="stroke-dashoffset: ${strokeDashoffset}; transition: stroke-dashoffset 0.25s;"
+					r="${radius}"
+					cx="${center}"
+					cy="${center}"
+				/>
+			</svg>
+		` : '';
+
+		return html `
+			<div class="shape ${isVertical ? 'vertical' : ''}" style="${shapeStyle}; position: relative;">
+				${timerRing}
+				<ha-icon .icon="${activeIcon}" style="${iconStyle}"></ha-icon>
+			</div>
+		`;
+	}
 
     _renderVolumeButton(change, icon, lightColorStyle) {
         const isOn = this.hass.states[this._config.light_entity].state === 'on';
@@ -810,9 +867,11 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
     }
 
     _setTimer(minutes) {
-        this._vibrate();
-        this._timerEnd = Date.now() + (minutes * 60000);
-        this._updateTimer();
+		this._vibrate();
+		this._timerDuration = minutes * 60000;
+		this._timerEnd = Date.now() + (minutes * 60000);
+		this._timerPercent = 100; 
+		this._updateTimer();
         
         if (this.hass.services.hatch?.set_timer) {
             this.hass.callService("hatch", "set_timer", {
@@ -826,6 +885,8 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
         this._vibrate();
         this._timerEnd = null;
         this._timerRemaining = '';
+		this._timerPercent = 0;
+		this._timerDuration = null;
         
         if (this.hass.services.hatch?.cancel_timer) {
             this.hass.callService("hatch", "cancel_timer", {
@@ -1118,7 +1179,8 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
                 height: 48px;
             }
             .shape {
-                display: flex;
+                position: relative;
+				display: flex;
                 align-items: center;
                 justify-content: center;
                 height: 42px;
@@ -1188,9 +1250,9 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
             .volume-button:hover {
                 transform: scale(1.1);
             }
-            .volume-button:active {
-                transform: scale(0.95);
-            }
+								   
+									   
+			 
             .volume-button ha-icon {
                 --mdc-icon-size: 20px;
             }

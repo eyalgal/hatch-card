@@ -73,6 +73,7 @@ Add the card to your dashboard by using the visual editor or by adding the YAML 
 | `show_expand_button`          | boolean | `false`               | If true, additional controls are hidden behind an expand button. If false, they are always visible.                                      |
 | `show_sound_control`          | boolean | `false`               | Show the sound mode dropdown selector in the expanded view.                                                                              |
 | `show_brightness_control`     | boolean | `false`               | Show the brightness slider in the expanded view.                                                                                         |
+| `show_brightness_when_off`    | boolean | `false`               | Show the brightness slider when brightness is 0%.                                                                                         |
 | `show_timer`                  | boolean | `false`               | Show the sleep timer presets in the expanded view.                                                                                       |
 | `volume_presets`              | array   | `null`                | An array of volume presets (0-1) to show as buttons in the expanded view. Example: `[0.25, 0.5, 0.75]`                                     |
 | `volume_step`                 | number  | `0.01`                | The amount to change the volume with each button press (1% = 0.01).                                                                      |

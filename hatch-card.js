@@ -13,7 +13,7 @@ import {
     css
 } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
 
-const cardVersion = "1.1.1"; 
+const cardVersion = "1.1.2"; 
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {
@@ -80,7 +80,7 @@ const COLOR_NAMES = {
     'olive': [128, 128, 0],
     'teal': [0, 128, 128],
     'silver': [192, 192, 192],
-    'gray': [128, 128, 128],
+    'gray': [128, 128, 0],
     'black': [0, 0, 0],
 	'dark blue': [73, 143, 225],
 	'light blue': [41, 193, 215]
@@ -162,6 +162,7 @@ class HatchCard extends LitElement {
             show_volume_buttons: true,
             show_sound_control: false,
             show_brightness_control: false,
+            show_brightness_when_off: false,
             show_timer: false,
 			show_scenes: false,				
             show_expand_button: false,
@@ -265,7 +266,7 @@ class HatchCard extends LitElement {
 
 render() {
         if (!this.hass || !this._config) {
-            return html ``;
+            return html``;
         }
         
         // If entities are not defined, show a friendly setup message instead of an error.
@@ -345,13 +346,13 @@ render() {
 		const layoutClass = this._config.layout === 'horizontal' ? 'horizontal-layout' : 'vertical-layout';
 		const expandedClass = this._showControls ? 'expanded' : '';
 
-		const hasExpandableControls = this._config.show_brightness_control || this._config.show_timer || this._config.show_sound_control || this._config.show_scenes;
+		const hasExpandableControls = this._config.show_brightness_control || this._config.show_timer || this._config.show_sound_control || this._config.show_scenes || (this._config.volume_presets && this._config.volume_presets.length > 0);
 		const showExpandButton = this._config.show_expand_button && hasExpandableControls;
 		const showExpandedControls = showExpandButton ? this._showControls : hasExpandableControls;
 		
 		const verticalExpandedClass = (this._config.layout === 'vertical' && showExpandButton) ? 'has-expand-button' : '';
 
-        return html `
+        return html`
             <ha-card 
                 style="${cardStyle}" 
                 class="${layoutClass} ${expandedClass} ${verticalExpandedClass}"
@@ -436,7 +437,7 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
         
         return html`
             <div class="expanded-controls ${showAlways ? 'always-visible' : ''}">
-                ${this._config.show_brightness_control && isOn ? html`
+                ${this._config.show_brightness_control && (isOn || this._config.show_brightness_when_off) ? html`
                     <div class="control-row">
                         <ha-icon icon="mdi:brightness-6"></ha-icon>
                         <div class="slider-container">
@@ -459,7 +460,7 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
                     </div>
                 ` : ''}
                 
-                ${this._config.volume_presets && showExpandButton && this._showControls ? html`
+                ${this._config.volume_presets && this._config.volume_presets.length > 0 ? html`
                     <div class="control-row presets">
                         <ha-icon icon="mdi:volume-high"></ha-icon>
                         <div class="preset-buttons">
@@ -553,7 +554,7 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
 
 	_renderIconOrPhoto(isOn, lightColorStyle, activeIcon, isVertical = false) {
 		if (this._config.user_photo) {
-			return html `<img class="user-photo ${isVertical ? 'vertical' : ''}" src="${this._config.user_photo}" alt="${this._config.name || 'User'}" />`;
+			return html`<img class="user-photo ${isVertical ? 'vertical' : ''}" src="${this._config.user_photo}" alt="${this._config.name || 'User'}" />`;
 		}
 		
 		const shapeStyle = `background-color: ${isOn ? lightColorStyle.replace('rgb', 'rgba').replace(')', ', 0.2)') : 'rgba(var(--rgb-primary-text-color), 0.05)'};`;
@@ -602,7 +603,7 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
 			</svg>
 		` : '';
 
-		return html `
+		return html`
 			<div class="shape ${isVertical ? 'vertical' : ''}" style="${shapeStyle}; position: relative;">
 				${timerRing}
 				<ha-icon .icon="${activeIcon}" style="${iconStyle}"></ha-icon>
@@ -616,7 +617,7 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
             `background-color: ${lightColorStyle.replace('rgb', 'rgba').replace(')', ', 0.2)')}; color: ${lightColorStyle};` :
             `background-color: rgba(var(--rgb-primary-text-color), 0.05); color: var(--primary-text-color);`;
             
-        return html `
+        return html`
             <div 
                 class="volume-button" 
                 style="${buttonStyle}" 
@@ -643,7 +644,7 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
             fullSoundList.unshift(selectedOption);
         }
 
-        return html `
+        return html`
             <ha-select
                 label="Sound"
                 .value="${selectedOption}"
@@ -656,11 +657,11 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
     }
 
     _renderError(message) {
-        return html `<ha-card><div class="error-msg">${message}</div></ha-card>`;
+        return html`<ha-card><div class="error-msg">${message}</div></ha-card>`;
     }
 
     _renderWarning(message) {
-        return html `<div class="warning-msg">${message}</div>`;
+        return html`<div class="warning-msg">${message}</div>`;
     }
 
     _handleAction(action) {
@@ -1054,7 +1055,7 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
     }
 
     static get styles() {
-        return css `
+        return css`
             :host {
                 display: flex;
                 flex-direction: column;
@@ -1250,9 +1251,9 @@ _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, s
             .volume-button:hover {
                 transform: scale(1.1);
             }
-								   
-									   
-			 
+								
+									
+			
             .volume-button ha-icon {
                 --mdc-icon-size: 20px;
             }
@@ -1575,6 +1576,7 @@ class HatchCardEditor extends LitElement {
             layout: 'horizontal',
             show_volume_buttons: true,
             show_expand_button: false,
+            show_brightness_when_off: false,
             haptic: true,
             volume_click_control: true,
             animation_duration: 250,
@@ -1727,7 +1729,7 @@ class HatchCardEditor extends LitElement {
             timerSoundModes.unshift(selectedTimerSound);
         }
 
-        return html `
+        return html`
     <div class="card-config">
         
         <div class="section">
@@ -1889,6 +1891,19 @@ class HatchCardEditor extends LitElement {
                                 <div class="switch-label">
                                     <span>Show Brightness Control</span>
                                     <span class="switch-description">Display brightness slider when expanded</span>
+                                </div>
+                            </label>
+
+                            <label class="switch-wrapper">
+                                <ha-switch
+                                    id="show_brightness_when_off"
+                                    .checked="${this._config?.show_brightness_when_off === true}"
+                                    @change="${this._valueChanged}"
+                                    .disabled="${this._config?.show_brightness_control !== true}"
+                                ></ha-switch>
+                                <div class="switch-label">
+                                    <span>Show Brightness When Off</span>
+                                    <span class="switch-description">Requires 'Show Brightness Control' to be on.</span>
                                 </div>
                             </label>
                             
@@ -2232,7 +2247,7 @@ class HatchCardEditor extends LitElement {
                                         </div>
                                     ` : ''}
                                 </div>
-                            `})}
+                                `})}
                         </div>
                     ` : html`
                         <div class="no-scenes">No scenes configured</div>
@@ -2251,7 +2266,7 @@ class HatchCardEditor extends LitElement {
     }
 
     static get styles() {
-        return css `
+        return css`
       .card-config {
         display: flex;
         flex-direction: column;
@@ -2359,7 +2374,7 @@ class HatchCardEditor extends LitElement {
       ha-textfield[type="number"] {
         width: 100%;
       }
-								  
+								
       /* Scene Styles */
       .scene-list {
         display: flex;

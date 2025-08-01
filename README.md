@@ -73,7 +73,7 @@ _or_
 | `show_expand_button`      | `boolean` | `false`             | If `true`, additional controls are hidden behind an expand button.                             |
 | `show_sound_control`      | `boolean` | `false`             | Show the sound-mode dropdown in the expanded view.                                             |
 | `show_brightness_control` | `boolean` | `false`             | Show the brightness slider in the expanded view.                                               |
-| `show_brightness_off`     | `boolean` | `false`             | Show the brightness slider even when the light is off.                                         |
+| `show_brightness_when_off`| `boolean` | `false`             | Show the brightness slider even when the light is off.                                         |
 | `show_timer`              | `boolean` | `false`             | Show the sleep-timer presets in the expanded view.                                             |
 | `show_scenes`             | `boolean` | `false`             | Show the scene buttons in the expanded view.                                                   |
 | `show_toddler_lock`       | `boolean` | `false`             | Show the toddler-lock toggle (requires `toddler_lock_entity`).                                 |

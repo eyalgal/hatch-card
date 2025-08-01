@@ -151,7 +151,7 @@ class HatchCard extends LitElement {
             show_volume_buttons: true,
             show_sound_control: false,
             show_brightness_control: false,
-            show_brightness_off: false,
+            show_brightness_when_off: false,
             show_timer: false,
             timer_entity: null,
             show_scenes: false,
@@ -476,7 +476,7 @@ class HatchCard extends LitElement {
 
         const controlsMap = {
             brightness: {
-                is_visible: () => hasLight && this._config.show_brightness_control && (isOn || this._config.show_brightness_off),
+                is_visible: () => hasLight && this._config.show_brightness_control && (isOn || this._config.show_brightness_when_off),
                 render: () => this._renderBrightnessControl(isOn, lightColor, brightness),
             },
             clock_brightness: {
@@ -1686,7 +1686,7 @@ class HatchCardEditor extends LitElement {
             layout: 'horizontal',
             show_volume_buttons: true,
             show_expand_button: false,
-            show_brightness_off: false,
+            show_brightness_when_off: false,
             haptic: true,
             volume_click_control: true,
             animation_duration: 250,
@@ -1849,7 +1849,7 @@ class HatchCardEditor extends LitElement {
                                 <label class="switch-wrapper"><ha-switch id="show_sound_control" .checked="${this._config?.show_sound_control === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Sound Selector</span></div></label>
                                 ${hasLight ? html`
                                     <label class="switch-wrapper"><ha-switch id="show_brightness_control" .checked="${this._config?.show_brightness_control === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Brightness Control</span></div></label>
-                                    <label class="switch-wrapper"><ha-switch id="show_brightness_off" .checked="${this._config?.show_brightness_off === true}" @change="${this._valueChanged}" .disabled="${this._config?.show_brightness_control !== true}"></ha-switch><div class="switch-label"><span>Show Brightness When Off</span></div></label>
+                                    <label class="switch-wrapper"><ha-switch id="show_brightness_when_off" .checked="${this._config?.show_brightness_when_off === true}" @change="${this._valueChanged}" .disabled="${this._config?.show_brightness_control !== true}"></ha-switch><div class="switch-label"><span>Show Brightness When Off</span></div></label>
                                 ` : ''}
                                 <label class="switch-wrapper"><ha-switch id="show_timer" .checked="${this._config?.show_timer === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Sleep Timer</span></div></label>
                                 <label class="switch-wrapper"><ha-switch id="show_scenes" .checked="${this._config?.show_scenes === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Scenes</span></div></label>

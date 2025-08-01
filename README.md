@@ -17,28 +17,30 @@ A sleek, modern, and highly customizable Lovelace card to control your Hatch Res
 [](https://www.google.com/search?q=https://github.com/eyalgal/hatch-card/actions/workflows/release.yml)
 
 > **Note**
-> This card was built for and tested with the **Hatch Rest+**. It may work with other Hatch products (like the Rest, Rest Mini, or Restore) if they are supported by the underlying Hatch integration, but functionality is not guaranteed.
+> This card was built for and tested with the **Hatch Rest+**. It may work with other Hatch products (like the Rest, Rest Mini, or Restore) if they are supported by the underlying Hatch integration, but functionality is not guaranteed. The card is also flexible enough to be used with other sound and light devices from different brands.
 
-## ✨ Features
+## **✨ Features**
 
--   **All-in-One Control:** Manage your Hatch light and sound from a single, unified card.
--   **Two Layouts:** Choose between a compact `vertical` or a detailed `horizontal` layout to fit your dashboard.
--   **Dynamic Backgrounds:** Set the card background to reflect the light's color, visually represent the volume level, or keep it standard.
--   **Powerful Sleep Timer:** Create timers with custom presets and define actions upon expiration (e.g., turn sound off and change light to green for an "OK-to-Wake" clock).
--   **Full Action Support:** Supports standard Home Assistant `tap_action`, `hold_action`, and `double_tap_action` for endless possibilities.
--   **Highly Customizable:** Toggle visibility for volume buttons, brightness sliders, sound selectors, and timers to create your perfect interface.
--   **Custom Icons & Photos:** Use dynamic icons that change with the sound, set your own static icon, or even use a photo for a personal touch.
--   **Easy Configuration:** Fully configurable through the Lovelace visual UI editor.
--   **Haptic Feedback:** Get optional tactile feedback on mobile devices when you interact with the card.
+* **All-in-One Control:** Manage your device's light and sound from a single, unified card.  
+* **Sound-Only Mode:** The light entity is now optional, allowing the card to function as a dedicated media player controller.  
+* **Persistent Sleep Timer:** Link to an `input_text` helper to create a timer that survives browser reloads and stays in sync across devices.  
+* **Device-Specific Controls:** Native support for Toddler Lock, Clock Brightness, and Battery Level indicators (requires corresponding entities).  
+* **Customizable Layouts & Controls:** Choose between `vertical` or `horizontal` layouts and re-order controls to build your perfect interface.  
+* **Dynamic Backgrounds:** Set the card background to reflect the light's color, visually represent the volume level, or keep it standard.  
+* **Full Action Support:** Supports standard Home Assistant `tap_action`, `hold_action`, and `double_tap_action`.  
+* **Custom Icons & Photos:** Use dynamic icons that change with the sound, set your own static icon, or even use a photo for a personal touch.  
+* **Easy Configuration:** Fully configurable through the Lovelace visual UI editor.  
+* **Haptic Feedback:** Get optional tactile feedback on mobile devices when you interact with the card.
 
-## ✅ Requirements
+## **✅ Requirements**
 
-  * **Home Assistant:** Version 2023.4 or newer.
-  * **Hatch Integration:** This card requires the [Hatch Rest Integration](https://github.com/dahlb/ha_hatch) by `dahlb` to be installed and configured in Home Assistant.
+* **Home Assistant:** Version 2023.4 or newer.  
+* **Hatch Integration (Optional):** For Hatch devices, the [Hatch Rest Integration](https://github.com/dahlb/ha_hatch) by `dahlb` is required.  
+* For other devices, you just need a `media_player` entity.
 
-## 🚀 Installation
+## **🚀 Installation**
 
-### HACS
+### **HACS**
 
 Hatch Card is available in [HACS](https://hacs.xyz/) (Home Assistant Community Store).
 
@@ -53,43 +55,77 @@ _or_
 3. Search for "Hatch Card"  
 4. Click the download button. ⬇️
 
+### **Main Configuration**
 
-## Configuration
+| Name                      | Type      | Default             | Description                                                                                    |
+| :------------------------ | :-------- | :------------------ | :--------------------------------------------------------------------------------------------- |
+| `type`                    | `string`  | **Required**        | `custom:hatch-card`                                                                            |
+| `media_player_entity`     | `string`  | **Required**        | The entity ID of your media player.                                                            |
+| `light_entity`            | `string`  | `null`              | The entity ID of your light. **Now optional!**                                                 |
+| `name`                    | `string`  | Entity Name         | A custom name for the card.                                                                    |
+| `icon`                    | `string`  | `mdi:speaker`       | A custom icon. If not set, it uses a dynamic, sound-specific icon.                             |
+| `user_photo`              | `string`  | `null`              | A URL to a photo to use instead of an icon.                                                    |
+| `layout`                  | `string`  | `horizontal`        | Card layout. Can be `horizontal` or `vertical`.                                                |
+| `background_mode`         | `string`  | `full`              | Card background style: `full` (color fill), `volume` (fill based on volume), or `none`.        |
+| `secondary_info`          | `string`  | `Volume {volume}%`  | Custom text. Use placeholders like `{volume}`, `{sound}`, `{brightness}`. Set to `''` to hide. |
+| `controls_order`          | `array`   | `[...]`             | A comma-separated list to re-order expanded controls.                                          |
+| `show_volume_buttons`     | `boolean` | `true`              | Show the volume up/down buttons.                                                               |
+| `show_expand_button`      | `boolean` | `false`             | If `true`, additional controls are hidden behind an expand button.                             |
+| `show_sound_control`      | `boolean` | `false`             | Show the sound-mode dropdown in the expanded view.                                             |
+| `show_brightness_control` | `boolean` | `false`             | Show the brightness slider in the expanded view.                                               |
+| `show_brightness_off`     | `boolean` | `false`             | Show the brightness slider even when the light is off.                                         |
+| `show_timer`              | `boolean` | `false`             | Show the sleep-timer presets in the expanded view.                                             |
+| `show_scenes`             | `boolean` | `false`             | Show the scene buttons in the expanded view.                                                   |
+| `show_toddler_lock`       | `boolean` | `false`             | Show the toddler-lock toggle (requires `toddler_lock_entity`).                                 |
+| `show_clock_brightness`   | `boolean` | `false`             | Show the clock-brightness slider (requires `clock_brightness_entity`).                         |
+| `show_battery_indicator`  | `boolean` | `false`             | Show the battery indicator (requires `battery_level_entity`).                                  |
+| `timer_entity`            | `string`  | `null`              | Entity ID for an `input_text` helper to make the timer persistent.                             |
+| `toddler_lock_entity`     | `string`  | `null`              | Entity ID for the toddler-lock switch entity.                                                  |
+| `clock_brightness_entity` | `string`  | `null`              | Entity ID for the clock-brightness light entity.                                               |
+| `battery_level_entity`    | `string`  | `null`              | Entity ID for the battery-level sensor entity.                                                 |
+| `charging_status_entity`  | `string`  | `null`              | Entity ID for the charging-status `binary_sensor`.                                             |
+| `volume_presets`          | `array`   | `null`              | An array of volume presets (0–1) for buttons. E.g. `[0.25, 0.5, 0.75]`.                        |
+| `volume_step`             | `number`  | `0.01`              | The amount to change the volume with each button press.                                        |
+| `animation_duration`      | `number`  | `250`               | Duration of animations in milliseconds. Set to `0` to disable.                                 |
+| `haptic`                  | `boolean` | `true`              | Enable haptic feedback (vibration) on touch.                                                   |
+| `volume_click_control`    | `boolean` | `true`              | When `background_mode` is `volume`, allows setting volume by clicking the card.                |
+| `tap_action`              | `object`  | `action: toggle`    | Action to perform on a single tap.                                                             |
+| `hold_action`             | `object`  | `action: more-info` | Action to perform on a long press.                                                             |
+| `double_tap_action`       | `object`  | `action: none`      | Action to perform on a double tap.                                                             |
 
-Add the card to your dashboard by using the visual editor or by adding the YAML configuration. The table below outlines all available options.
+---
 
-| Name                          | Type    | Default               | Description                                                                                                                              |
-| ----------------------------- | ------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`                        | string  | **Required** | `custom:hatch-card`                                                                                                                      |
-| `light_entity`                | string  | **Required** | The entity ID of your Hatch light.                                                                                                       |
-| `media_player_entity`         | string  | **Required** | The entity ID of your Hatch media player.                                                                                                |
-| `name`                        | string  | Entity Name           | A custom name for the card.                                                                                                              |
-| `icon`                        | string  | `mdi:speaker`         | A custom icon to display. If not set, it will use the media player's icon or a sound-specific icon.                                      |
-| `user_photo`                  | string  | `null`                | A URL to a photo to use instead of an icon.                                                                                              |
-| `layout`                      | string  | `horizontal`          | The layout of the card. Can be `horizontal` or `vertical`.                                                                               |
-| `background_mode`             | string  | `full`                | Card background style. `full` (color fill), `volume` (color fill based on volume), or `none`.                                            |
-| `secondary_info`              | string  | `Volume {volume}%`    | Custom text to display. Use placeholders like `{volume}`, `{sound}`, and `{brightness}`. Set to `''` to hide.                              |
-| `show_volume_buttons`         | boolean | `true`                | Show the volume up/down buttons.                                                                                                         |
-| `show_expand_button`          | boolean | `false`               | If true, additional controls are hidden behind an expand button. If false, they are always visible.                                      |
-| `show_sound_control`          | boolean | `false`               | Show the sound mode dropdown selector in the expanded view.                                                                              |
-| `show_brightness_control`     | boolean | `false`               | Show the brightness slider in the expanded view.                                                                                         |
-| `show_brightness_when_off`    | boolean | `false`               | Show the brightness slider when brightness is 0%.                                                                                         |
-| `show_timer`                  | boolean | `false`               | Show the sleep timer presets in the expanded view.                                                                                       |
-| `volume_presets`              | array   | `null`                | An array of volume presets (0-1) to show as buttons in the expanded view. Example: `[0.25, 0.5, 0.75]`                                     |
-| `volume_step`                 | number  | `0.01`                | The amount to change the volume with each button press (1% = 0.01).                                                                      |
-| `animation_duration`          | number  | `250`                 | Duration of animations in milliseconds. Set to `0` to disable.                                                                           |
-| `haptic`                      | boolean | `true`                | Enable haptic feedback (vibration) on touch.                                                                                             |
-| `volume_click_control`        | boolean | `true`                | When `background_mode` is `volume`, allows setting the volume by clicking on the card background.                                        |
-| `tap_action`                  | object  | `action: toggle`      | Action to perform on a single tap.                                                                                                       |
-| `hold_action`                 | object  | `action: more-info`   | Action to perform on a long press.                                                                                                       |
-| `double_tap_action`           | object  | `action: none`        | Action to perform on a double tap.                                                                                                       |
-| `timer_presets`               | array   | `[15, 30, 60, 120]`   | An array of timer presets in minutes.                                                                                                    |
-| `timer_action_turn_off_light` | boolean | `true`                | Turn off the light when the timer expires.                                                                                               |
-| `timer_action_turn_off_media` | boolean | `false`               | Turn off the media player when the timer expires.                                                                                        |
-| `timer_action_light_color`    | string  | `null`                | Change light to a specific color when timer expires. E.g., `'red'` or `'255, 100, 0'`.                                                    |
-| `timer_action_light_brightness`| number | `null`                | Change light to a specific brightness (1-100) when timer expires.                                                                        |
-| `timer_action_sound_mode`     | string  | `null`                | Change the sound to a specific mode when timer expires.                                                                                  |
-| `timer_action_volume`         | number  | `null`                | Change the volume to a specific level (0-100) when timer expires.                                                                        |
+### **Timer Actions**
+
+These options define what happens when a sleep timer, initiated from the card, expires.
+
+| Name                            | Type      | Default             | Description                                                       |
+| :------------------------------ | :-------- | :------------------ | :---------------------------------------------------------------- |
+| `timer_presets`                 | `array`   | `[15, 30, 60, 120]` | An array of timer presets in minutes.                             |
+| `timer_action_turn_off_light`   | `boolean` | `true`              | Turn off the light when the timer expires.                        |
+| `timer_action_turn_off_media`   | `boolean` | `false`             | Turn off the media player when the timer expires.                 |
+| `timer_action_light_color`      | `string`  | `null`              | Change light to a specific color. E.g., `'red'` or `'255,100,0'`. |
+| `timer_action_light_brightness` | `number`  | `null`              | Change light to a specific brightness (1–100).                    |
+| `timer_action_sound_mode`       | `string`  | `null`              | Change the sound to a specific mode.                              |
+| `timer_action_volume`           | `number`  | `null`              | Change the volume to a specific level (0–100).                    |
+
+---
+
+### **Scene Configuration**
+
+The `scenes` option takes a list of scene objects. Each object can define its own set of parameters.
+
+| Name             | Type      | Description                                                                                     |
+| :--------------- | :-------- | :---------------------------------------------------------------------------------------------- |
+| `name`           | `string`  | **Required.** The name displayed on the scene button.                                           |
+| `icon`           | `string`  | An icon for the scene button (e.g., `mdi:weather-night`).                                       |
+| `entity_id`      | `string`  | The entity ID of a Home Assistant scene. If used, it overrides all other manual settings below. |
+| `turn_off_light` | `boolean` | Set to `true` to turn the light off.                                                            |
+| `turn_off_media` | `boolean` | Set to `true` to turn the media player off.                                                     |
+| `color`          | `string`  | Set the light color by name (`'red'`) or RGB (`'255,0,0'`).                                     |
+| `brightness`     | `number`  | Set the light brightness from 1–100.                                                            |
+| `sound_mode`     | `string`  | The name of the sound to play (e.g., `'WhiteNoise'`).                                           |
+| `volume`         | `number`  | Set the volume from 0–100.                                                                      |
 
 ## Use Cases & Examples
 
@@ -205,10 +241,10 @@ hold_action:
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
 
-
-
 ## ❤️ Support
 
 If you find this card useful and would like to show your support, you can buy me a coffee:
 
 <a href="https://coff.ee/eyalgal" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+
+		

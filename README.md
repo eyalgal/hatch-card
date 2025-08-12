@@ -31,6 +31,10 @@ A sleek, modern, and highly customizable Lovelace card to control your Hatch Res
 * **Custom Icons & Photos:** Use dynamic icons that change with the sound, set your own static icon, or even use a photo for a personal touch.  
 * **Easy Configuration:** Fully configurable through the Lovelace visual UI editor.  
 * **Haptic Feedback:** Get optional tactile feedback on mobile devices when you interact with the card.
+* **Volume Slider (NEW in v1.2.1):** Add a volume slider to the expanded controls for finer volume adjustment.
+* **Custom Controls Order (NEW in v1.2.1):** You can now fully customize the order of expanded controls, including the new slider.
+* **Improved Scene Actions (v1.2.1):** Scenes now support transition times and better input handling.
+* **Better Timer Actions (v1.2.1):** Timer expiration options now reliably handle empty values and transitions.
 
 ## **✅ Requirements**
 
@@ -68,8 +72,9 @@ _or_
 | `layout`                  | `string`  | `horizontal`        | Card layout. Can be `horizontal` or `vertical`.                                                |
 | `background_mode`         | `string`  | `full`              | Card background style: `full` (color fill), `volume` (fill based on volume), or `none`.        |
 | `secondary_info`          | `string`  | `Volume {volume}%`  | Custom text. Use placeholders like `{volume}`, `{sound}`, `{brightness}`. Set to `''` to hide. |
-| `controls_order`          | `array`   | `[...]`             | A comma-separated list to re-order expanded controls.                                          |
+| `controls_order`          | `array`   | `[...]`             | A comma-separated list to re-order expanded controls. Now includes `volume_slider`.            |
 | `show_volume_buttons`     | `boolean` | `true`              | Show the volume up/down buttons.                                                               |
+| `show_volume_slider`      | `boolean` | `false`             | Show a volume slider in the expanded controls. *(NEW in v1.2.1)*                               |
 | `show_expand_button`      | `boolean` | `false`             | If `true`, additional controls are hidden behind an expand button.                             |
 | `show_sound_control`      | `boolean` | `false`             | Show the sound-mode dropdown in the expanded view.                                             |
 | `show_brightness_control` | `boolean` | `false`             | Show the brightness slider in the expanded view.                                               |
@@ -120,6 +125,7 @@ The `scenes` option takes a list of scene objects. Each object can define its ow
 | `name`           | `string`  | **Required.** The name displayed on the scene button.                                           |
 | `icon`           | `string`  | An icon for the scene button (e.g., `mdi:weather-night`).                                       |
 | `entity_id`      | `string`  | The entity ID of a Home Assistant scene. If used, it overrides all other manual settings below. |
+| `transition`     | `number`  | Transition time (seconds) for the scene. *(NEW in v1.2.1)*                                      |
 | `turn_off_light` | `boolean` | Set to `true` to turn the light off.                                                            |
 | `turn_off_media` | `boolean` | Set to `true` to turn the media player off.                                                     |
 | `color`          | `string`  | Set the light color by name (`'red'`) or RGB (`'255,0,0'`).                                     |

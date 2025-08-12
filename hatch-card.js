@@ -5,17 +5,16 @@
  *
  * Author: eyalgal
  * License: MIT
- * Version: 1.2.0
- * For more information, visit: https://github.com/eyalgal/hatch-card										   
- */		 
+ * Version: 1.2.1
+ */
 import {
     LitElement,
     html,
     css
 } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
 
-const cardVersion = "1.2.0";
-console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");																																						  
+const cardVersion = "1.2.1";
+console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {
     BrownNoise: "mdi:volume-high",
@@ -80,7 +79,7 @@ const COLOR_NAMES = {
 
 function getColorNameFromRgb(rgbArray) {
     if (!rgbArray || !Array.isArray(rgbArray)) return '';
-    
+
     const rgbString = rgbArray.join(',');
     for (const [name, rgb] of Object.entries(COLOR_NAMES)) {
         if (rgb.join(',') === rgbString) {
@@ -92,13 +91,13 @@ function getColorNameFromRgb(rgbArray) {
 
 function parseColorInput(input) {
     if (!input || !input.trim()) return null;
-    
+
     const trimmed = input.trim().toLowerCase();
-    
+
     if (COLOR_NAMES[trimmed]) {
         return COLOR_NAMES[trimmed];
     }
-    
+
     const rgbMatch = trimmed.match(/^\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*$/);
     if (rgbMatch) {
         const r = parseInt(rgbMatch[1]);
@@ -108,7 +107,7 @@ function parseColorInput(input) {
             return [r, g, b];
         }
     }
-    
+
     return null;
 }
 
@@ -149,6 +148,7 @@ class HatchCard extends LitElement {
             layout: "horizontal",
             icon: "mdi:speaker",
             show_volume_buttons: true,
+            show_volume_slider: false,
             show_sound_control: false,
             show_brightness_control: false,
             show_brightness_when_off: false,
@@ -186,6 +186,7 @@ class HatchCard extends LitElement {
             controls_order: [
                 'brightness',
                 'clock_brightness',
+                'volume_slider',
                 'volume_presets',
                 'sound',
                 'scenes',
@@ -194,9 +195,9 @@ class HatchCard extends LitElement {
             ],
             ...config,
         };
-        
+
         this._config.volume_step = parseFloat(this._config.volume_step) || 0.01;
-        
+
         if (oldResponsiveBg === false) {
             this._config.background_mode = "none";
         }
@@ -208,7 +209,7 @@ class HatchCard extends LitElement {
         }
         return document.createElement("hatch-card-editor");
     }
-    
+
     static getStubConfig() {
         return {
             type: "custom:hatch-card",
@@ -296,7 +297,7 @@ class HatchCard extends LitElement {
 
     render() {
         if (!this.hass || !this._config) return html``;
-        
+
         if (!this._config.media_player_entity) {
             return html`
                 <ha-card>
@@ -320,7 +321,7 @@ class HatchCard extends LitElement {
         const isOn = hasLight ? lightState.state === 'on' : mediaState.state === 'playing';
         const brightness = hasLight ? lightState.attributes.brightness || 0 : 0;
         const brightnessPercent = Math.round((brightness / 255) * 100);
-        
+
         let lightColor = 'var(--state-icon-color)';
         let lightColorRgb = null;
 
@@ -342,26 +343,32 @@ class HatchCard extends LitElement {
         } else if (isOn) {
             lightColor = 'var(--primary-color)';
         }
-        
+
         const volumeLevel = mediaState.attributes.volume_level || 0;
         const volumePercent = Math.round(volumeLevel * 100);
         const soundMode = mediaState.attributes.sound_mode || 'None';
-        
-        const name = this._config.name || (hasLight ? lightState.attributes.friendly_name : mediaState.attributes.friendly_name);
-        
-        const activeIcon = this._userProvidedIcon || SOUND_ICON_MAP[soundMode] || mediaState.attributes.icon || this._config.icon;
+
+        let name = this._config.name;
+        let secondaryInfo = '';
+        let activeIcon;
+
+        if (hasLight) {
+            name = name || lightState.attributes.friendly_name;
+            activeIcon = this._userProvidedIcon || mediaState.attributes.icon || SOUND_ICON_MAP[soundMode] || this._config.icon;
+            if (this._config.secondary_info && this._config.secondary_info.trim() !== '') {
+                secondaryInfo = this._config.secondary_info
+                    .replace('{volume}', volumePercent)
+                    .replace('{sound}', soundMode)
+                    .replace('{brightness}', brightnessPercent);
+            }
+        } else {
+            name = name || mediaState.attributes.media_title || mediaState.attributes.friendly_name;
+            activeIcon = this._userProvidedIcon || mediaState.attributes.entity_picture || mediaState.attributes.icon || SOUND_ICON_MAP[soundMode] || this._config.icon;
+            secondaryInfo = mediaState.attributes.media_artist || (this._config.secondary_info ? this._config.secondary_info.replace('{volume}', volumePercent).replace('{sound}', soundMode) : '');
+        }
+
 
         const cardStyle = this._getCardBackgroundStyle(lightColorRgb, volumePercent, hasLight);
-
-        let secondaryInfo = '';
-        if (this._config.secondary_info && this._config.secondary_info.trim() !== '') {
-            secondaryInfo = this._config.secondary_info
-                .replace('{volume}', volumePercent)
-                .replace('{sound}', soundMode);
-            if (hasLight) {
-                secondaryInfo = secondaryInfo.replace('{brightness}', brightnessPercent);
-            }
-        }
 
         if (this._timerRemaining && secondaryInfo) {
             secondaryInfo = `${secondaryInfo} • ${this._timerRemaining}`;
@@ -376,8 +383,9 @@ class HatchCard extends LitElement {
             switch (key) {
                 case 'brightness': return hasLight && this._config.show_brightness_control;
                 case 'clock_brightness': return hasLight && this._config.show_clock_brightness;
+                case 'volume_slider': return this._config.show_volume_slider;
                 case 'volume_presets': return this._config.volume_presets && this._config.volume_presets.length > 0;
-                case 'sound': return this._config.show_sound_control;
+                case 'sound': return this._config.show_sound_control && mediaState.attributes.sound_mode_list && mediaState.attributes.sound_mode_list.length > 0;
                 case 'scenes': return this._config.show_scenes;
                 case 'timer': return this._config.show_timer;
                 case 'toddler_lock': return this._config.show_toddler_lock;
@@ -470,7 +478,7 @@ class HatchCard extends LitElement {
             </div>
         `;
     }
-    
+
     _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, hasLight) {
         const showAlways = !this._config.show_expand_button;
 
@@ -483,12 +491,16 @@ class HatchCard extends LitElement {
                 is_visible: () => hasLight && this._config.show_clock_brightness && this._config.clock_brightness_entity,
                 render: () => this._renderClockBrightnessControl(),
             },
+            volume_slider: {
+                is_visible: () => this._config.show_volume_slider,
+                render: () => this._renderVolumeSliderControl(volumeLevel, lightColor),
+            },
             volume_presets: {
                 is_visible: () => this._config.volume_presets && this._config.volume_presets.length > 0,
                 render: () => this._renderVolumePresetsControl(volumeLevel, lightColor),
             },
             sound: {
-                is_visible: () => this._config.show_sound_control,
+                is_visible: () => this._config.show_sound_control && mediaState.attributes.sound_mode_list && mediaState.attributes.sound_mode_list.length > 0,
                 render: () => this._renderSoundControl(mediaState),
             },
             scenes: {
@@ -509,7 +521,7 @@ class HatchCard extends LitElement {
             .map(key => controlsMap[key])
             .filter(control => control && control.is_visible())
             .map(control => control.render());
-        
+
         if (orderedControls.length === 0) {
             return html``;
         }
@@ -520,13 +532,13 @@ class HatchCard extends LitElement {
             </div>
         `;
     }
-    
+
     _getCardBackgroundStyle(rgb, volumePercent, hasLight) {
         const defaultBg = 'var(--ha-card-background, var(--card-background-color, #FFF))';
         if (!hasLight || !rgb || this._config.background_mode === 'none') {
             return `background: ${defaultBg};`;
         }
-        
+
         const color = `rgba(${rgb}, 0.1)`;
 
         switch (this._config.background_mode) {
@@ -540,18 +552,30 @@ class HatchCard extends LitElement {
     }
 
     _renderIconOrPhoto(isOn, lightColorStyle, activeIcon, isVertical = false) {
-        if (this._config.user_photo) {
-            return html`<img class="user-photo ${isVertical ? 'vertical' : ''}" src="${this._config.user_photo}" alt="${this._config.name || 'User'}" />`;
+        if (this._config.user_photo || (activeIcon && activeIcon.startsWith('/'))) {
+            const photoUrl = this._config.user_photo || activeIcon;
+            return html`<img class="user-photo ${isVertical ? 'vertical' : ''}" src="${photoUrl}" alt="${this._config.name || 'User'}" />`;
         }
 
-        const shapeStyle = `background-color: ${isOn ? lightColorStyle.replace('rgb', 'rgba').replace(')', ', 0.2)') : 'rgba(var(--rgb-primary-text-color), 0.05)'};`;
-        const iconStyle = `color: ${isOn ? lightColorStyle : 'var(--primary-text-color, var(--paper-item-icon-color))'};`;
+        let shapeBg;
+        if (isOn) {
+            if (lightColorStyle.startsWith('rgb')) {
+                shapeBg = lightColorStyle.replace('rgb', 'rgba').replace(')', ', 0.2)');
+            } else {
+                shapeBg = 'rgba(var(--rgb-primary-color), 0.2)';
+            }
+        } else {
+            shapeBg = 'rgba(var(--rgb-primary-text-color), 0.05)';
+        }
+
+        const shapeStyle = `background-color: ${shapeBg}`;
+        const iconStyle = `color: ${isOn ? lightColorStyle : 'var(--primary-text-color, var(--paper-item-icon-color))'}`;
 
         const size = isVertical ? 48 : 42;
         const strokeWidth = 3;
         const svgSize = size + strokeWidth * 2;
         const center = svgSize / 2;
-        const radius = (size / 2) + (strokeWidth / 2); 
+        const radius = (size / 2) + (strokeWidth / 2);
         const circumference = radius * 2 * Math.PI;
         const strokeDashoffset = circumference - (this._timerPercent / 100) * circumference;
 
@@ -600,11 +624,18 @@ class HatchCard extends LitElement {
         const mediaState = this.hass.states[this._config.media_player_entity];
         const lightState = this._config.light_entity ? this.hass.states[this._config.light_entity] : null;
         const isOn = lightState ? lightState.state === 'on' : mediaState.state === 'playing';
-        
-        const buttonStyle = isOn ? 
-            `background-color: ${lightColorStyle.replace('rgb', 'rgba').replace(')', ', 0.2)')}; color: ${lightColorStyle};` :
-            `background-color: rgba(var(--rgb-primary-text-color), 0.05); color: var(--primary-text-color);`;
-            
+
+        let buttonStyle;
+        if (isOn) {
+            if (lightColorStyle.startsWith('rgb')) {
+                buttonStyle = `background-color: ${lightColorStyle.replace('rgb', 'rgba').replace(')', ', 0.2)')}; color: ${lightColorStyle};`;
+            } else {
+                buttonStyle = `background-color: rgba(var(--rgb-primary-color), 0.2); color: ${lightColorStyle};`;
+            }
+        } else {
+            buttonStyle = `background-color: rgba(var(--rgb-primary-text-color), 0.05); color: var(--primary-text-color);`;
+        }
+
         return html`
             <div 
                 class="volume-button" 
@@ -642,7 +673,7 @@ class HatchCard extends LitElement {
             </ha-select>
         `;
     }
-    
+
     _renderBrightnessControl(isOn, lightColor, brightness) {
         return html`
             <div class="control-row">
@@ -664,6 +695,32 @@ class HatchCard extends LitElement {
                     />
                 </div>
                 <span class="control-value">${Math.round((brightness / 255) * 100)}%</span>
+            </div>
+        `;
+    }
+
+    _renderVolumeSliderControl(volumeLevel, lightColor) {
+        return html`
+            <div class="control-row">
+                <ha-icon icon="mdi:volume-high"></ha-icon>
+                <div class="slider-container">
+                    <div class="slider-track">
+                        <div 
+                            class="slider-fill" 
+                            style="width: ${volumeLevel * 100}%; background-color: ${lightColor};"
+                        ></div>
+                    </div>
+                    <input 
+                        type="range" 
+                        class="slider-input"
+                        min="0" 
+                        max="1" 
+                        step="0.01"
+                        .value="${volumeLevel}"
+                        @input="${(e) => this._setVolume(parseFloat(e.target.value))}"
+                    />
+                </div>
+                <span class="control-value">${Math.round(volumeLevel * 100)}%</span>
             </div>
         `;
     }
@@ -821,7 +878,7 @@ class HatchCard extends LitElement {
         if (chargingEntity) {
             isCharging = chargingEntity.state !== 'Not Charging' && chargingEntity.state !== 'off';
         }
-        
+
         const lowBattery = level < 10;
         const color = lowBattery && !isCharging ? 'var(--error-color)' : 'var(--secondary-text-color)';
 
@@ -843,7 +900,7 @@ class HatchCard extends LitElement {
                 icon = `mdi:battery-${roundedLevel}`;
             }
         }
-        
+
         const style = isVertical ? 'position: absolute; top: 12px; right: 12px;' : '';
 
         return html`
@@ -866,9 +923,9 @@ class HatchCard extends LitElement {
 
     _handleAction(action) {
         if (!action || action.action === 'none') return;
-        
+
         this._vibrate();
-        
+
         switch (action.action) {
             case 'toggle': this._toggleDevice(); break;
             case 'more-info': this._showMoreInfo(); break;
@@ -890,23 +947,40 @@ class HatchCard extends LitElement {
 
     _callService(action) {
         const [domain, service] = action.service.split('.');
-        let serviceData = {};
+        const serviceData = { ...(action.service_data || {}), ...(action.data || {}) };
         
-        if (action.service_data) serviceData = { ...action.service_data };
-        if (action.data) serviceData = { ...serviceData, ...action.data };
-        
-        if (action.target) {
-            if (action.target.entity_id) {
-                if (action.target.entity_id === 'light' && this._config.light_entity) serviceData.entity_id = this._config.light_entity;
-                else if (action.target.entity_id === 'media_player') serviceData.entity_id = this._config.media_player_entity;
-                else serviceData.entity_id = action.target.entity_id;
-            }
+        let entityId = null;
+
+        if (action.target && action.target.entity_id) {
+            entityId = action.target.entity_id;
         } else if (serviceData.entity_id) {
-            if (serviceData.entity_id === 'light' && this._config.light_entity) serviceData.entity_id = this._config.light_entity;
-            else if (serviceData.entity_id === 'media_player') serviceData.entity_id = this._config.media_player_entity;
+            entityId = serviceData.entity_id;
+        }
+
+        if (entityId === 'light') {
+            entityId = this._config.light_entity;
+        } else if (entityId === 'media_player') {
+            entityId = this._config.media_player_entity;
+        }
+
+        if (!entityId) {
+            if (domain === 'light') {
+                entityId = this._config.light_entity;
+            } else if (domain === 'media_player') {
+                entityId = this._config.media_player_entity;
+            }
         }
         
-        this.hass.callService(domain, service, serviceData);
+        if (!entityId) {
+            entityId = this._config.light_entity || this._config.media_player_entity;
+        }
+
+        if (entityId) {
+            serviceData.entity_id = entityId;
+            this.hass.callService(domain, service, serviceData);
+        } else {
+            console.error('Hatch Card: No entity_id could be determined for the service call.', action);
+        }
     }
 
     _handleMouseDown(e) { this._handleStart(e); }
@@ -925,10 +999,10 @@ class HatchCard extends LitElement {
     _handleEnd(e) {
         e.stopPropagation();
         this._clearHoldTimer();
-        
+
         if (this._holdTimer) {
             this._tapCount++;
-            
+
             if (this._tapCount === 1) {
                 this._tapTimer = setTimeout(() => {
                     this._handleAction(this._config.tap_action);
@@ -994,7 +1068,7 @@ class HatchCard extends LitElement {
             brightness: brightness,
         });
     }
-    
+
     _handleCardClick(e) {
         if (this._config.background_mode !== 'volume' || !this._config.volume_click_control) return;
         if (e.target.closest('.volume-button, .icon-container, .header, .expand-button, .expanded-controls')) return;
@@ -1057,7 +1131,7 @@ class HatchCard extends LitElement {
             this._localTimerEnd = endTime;
             this._localTimerDuration = durationInMillis;
         }
-        
+
         if (this.hass.services.hatch?.set_timer) {
             this.hass.callService("hatch", "set_timer", {
                 entity_id: this._config.media_player_entity,
@@ -1077,7 +1151,7 @@ class HatchCard extends LitElement {
             this._localTimerEnd = null;
             this._localTimerDuration = null;
         }
-        
+
         if (this.hass.services.hatch?.cancel_timer) {
             this.hass.callService("hatch", "cancel_timer", {
                 entity_id: this._config.media_player_entity,
@@ -1093,7 +1167,11 @@ class HatchCard extends LitElement {
     _activateScene(scene, hasLight) {
         this._vibrate();
         if (scene.entity_id) {
-            this.hass.callService("scene", "turn_on", { entity_id: scene.entity_id });
+            const serviceData = { entity_id: scene.entity_id };
+            if (scene.transition !== undefined && scene.transition !== null) {
+                serviceData.transition = scene.transition;
+            }
+            this.hass.callService("scene", "turn_on", serviceData);
             return;
         }
 
@@ -1111,6 +1189,10 @@ class HatchCard extends LitElement {
                     lightData.rgb_color = scene.color;
                     hasLightChanges = true;
                 }
+                if (scene.transition !== undefined && scene.transition !== null) {
+                    lightData.transition = scene.transition;
+                    hasLightChanges = true;
+                }
                 if (hasLightChanges) {
                     this.hass.callService("light", "turn_on", { entity_id: this._config.light_entity, ...lightData });
                 }
@@ -1124,13 +1206,13 @@ class HatchCard extends LitElement {
             if (scene.sound_mode) {
                 this.hass.callService("media_player", "select_sound_mode", { entity_id: this._config.media_player_entity, sound_mode: scene.sound_mode });
             }
-            if (scene.volume !== undefined && scene.volume !== null) {
+            if (scene.volume !== undefined && scene.volume !== null && scene.volume !== '') {
                 const volume = parseFloat(scene.volume) / 100;
                 this.hass.callService("media_player", "volume_set", { entity_id: this._config.media_player_entity, volume_level: Math.max(0, Math.min(1, volume)) });
             }
         }
     }
-                    
+
     _executeTimerActions() {
         if (!this.hass) return;
 
@@ -1140,7 +1222,7 @@ class HatchCard extends LitElement {
 
         if (hasLight && this._config.timer_action_turn_off_light) {
             this.hass.callService("light", "turn_off", { entity_id: this._config.light_entity });
-        } 
+        }
 
         if (willStopMedia) {
             this.hass.callService("media_player", "media_stop", { entity_id: this._config.media_player_entity });
@@ -1149,7 +1231,7 @@ class HatchCard extends LitElement {
             this.hass.callService("media_player", "select_sound_mode", { entity_id: this._config.media_player_entity, sound_mode: this._config.timer_action_sound_mode });
         }
 
-        if (!willStopMedia && this._config.timer_action_volume !== null) {
+        if (!willStopMedia && this._config.timer_action_volume !== null && this._config.timer_action_volume !== '') {
             const volume = parseFloat(this._config.timer_action_volume) / 100;
             this.hass.callService("media_player", "volume_set", { entity_id: this._config.media_player_entity, volume_level: Math.max(0, Math.min(1, volume)) });
         }
@@ -1599,25 +1681,23 @@ class HatchCard extends LitElement {
 }
 
 class HatchCardEditor extends LitElement {
-	_hass;
+    static get properties() {
+        return {
+            hass: {},
+            _config: {},
+            _expandedSections: { type: Object },
+            _editingSceneIndex: { type: Number }
+        };
+    }
 
-	static get properties() {
-	return {
-	  hass: {},
-	  _config: {},
-	  _expandedSections: { type: Object },
-	  _editingSceneIndex: { type: Number }
-	};
-	}
+    set hass(hass) {
+        this._hass = hass;
+        this.requestUpdate();
+    }
 
-	set hass(hass) {
-	this._hass = hass;
-	this.requestUpdate();
-	}
-
-	get hass() {
-	return this._hass;
-	}
+    get hass() {
+        return this._hass;
+    }
 
     constructor() {
         super();
@@ -1630,7 +1710,7 @@ class HatchCardEditor extends LitElement {
             timer: false,
             scenes: false
         };
-        this._editingSceneIndex = null;  
+        this._editingSceneIndex = null;
     }
 
     setConfig(config) {
@@ -1648,66 +1728,71 @@ class HatchCardEditor extends LitElement {
     _valueChanged(e) {
         if (!this._config || !this.hass) return;
 
-        const target = e.target;
-        const newConfig = { ...this._config };
-        let key = target.id || target.configValue || target.getAttribute('key');
-        let value;
+        let newConfig = { ...this._config };
 
-        if (target.tagName === 'HA-SWITCH') {
-            value = target.checked;
-        } else if (target.tagName === 'HA-SELECT' || target.tagName === 'HA-ENTITY-PICKER') {
-            value = e.detail?.value ?? target.value;
-        } else if (target.tagName === 'HA-ICON-PICKER') {
-            value = e.detail?.value || '';
-        } else if (key === 'volume_presets') {
-            value = target.value.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v) && v >= 0 && v <= 1);
-            if (value.length === 0) value = null;
-        } else if (key === 'timer_presets') {
-            value = target.value.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v) && v > 0);
-            if (value.length === 0) value = [15, 30, 60, 120];
-        } else if (key === 'timer_action_light_color') {
-            value = parseColorInput(target.value);
-        } else if (key.startsWith('timer_action_') && (key.endsWith('_brightness') || key.endsWith('_volume'))) {
-            const numValue = parseInt(target.value);
-            value = (!isNaN(numValue) && numValue >= 0 && numValue <= 100) ? numValue : null;
-        } else if (key === 'scenes_per_row') {
-            const numValue = parseInt(target.value);
-            value = (!isNaN(numValue) && numValue >= 1 && numValue <= 8) ? numValue : 4;
-        } else if (key === 'controls_order') {
-            value = target.value.split(',').map(v => v.trim()).filter(v => v);
-            if (value.length === 0) value = undefined;
-        }
-        else {
-            value = target.value;
-        }
-        
-        const defaults = {
-            background_mode: 'full',
-            layout: 'horizontal',
-            show_volume_buttons: true,
-            show_expand_button: false,
-            show_brightness_when_off: false,
-            haptic: true,
-            volume_click_control: true,
-            animation_duration: 250,
-            volume_step: 0.01,
-            secondary_info: 'Volume {volume}%',
-            timer_presets: [15, 30, 60, 120],
-            timer_action_turn_off_light: true,
-            scenes_per_row: 4,
-            show_toddler_lock: false,
-            show_clock_brightness: false,
-            show_battery_indicator: false,
-            show_battery_percentage: true,
-            controls_order: [
-                'brightness', 'clock_brightness', 'volume_presets', 'sound', 'scenes', 'timer', 'toddler_lock'
-            ],
-        };
-        
-        if ((defaults[key] !== undefined && JSON.stringify(value) === JSON.stringify(defaults[key])) || value === null || value === '' || value === undefined) {
-            delete newConfig[key];
+        if (e.detail && e.detail.value !== undefined) {
+            newConfig = { ...this._config, ...e.detail.value };
         } else {
-            newConfig[key] = value;
+            const target = e.target;
+            let key = target.id || target.configValue || target.getAttribute('key');
+            let value;
+
+            if (target.tagName === 'HA-SWITCH') {
+                value = target.checked;
+            } else if (target.tagName === 'HA-SELECT' || target.tagName === 'HA-ENTITY-PICKER') {
+                value = e.detail?.value ?? target.value;
+            } else if (target.tagName === 'HA-ICON-PICKER') {
+                value = e.detail?.value || '';
+            } else if (key === 'volume_presets') {
+                value = target.value.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v) && v >= 0 && v <= 1);
+                if (value.length === 0) value = null;
+            } else if (key === 'timer_presets') {
+                value = target.value.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v) && v > 0);
+                if (value.length === 0) value = [15, 30, 60, 120];
+            } else if (key === 'timer_action_light_color') {
+                value = parseColorInput(target.value);
+            } else if (key.startsWith('timer_action_') && (key.endsWith('_brightness') || key.endsWith('_volume'))) {
+                const numValue = parseInt(target.value);
+                value = (target.value.trim() === '' || isNaN(numValue)) ? null : (numValue >= 0 && numValue <= 100 ? numValue : null);
+            } else if (key === 'scenes_per_row') {
+                const numValue = parseInt(target.value);
+                value = (!isNaN(numValue) && numValue >= 1 && numValue <= 8) ? numValue : 4;
+            } else if (key === 'controls_order') {
+                value = target.value.split(',').map(v => v.trim()).filter(v => v);
+                if (value.length === 0) value = undefined;
+            } else {
+                value = target.value;
+            }
+            
+            const defaults = {
+                background_mode: 'full',
+                layout: 'horizontal',
+                show_volume_buttons: true,
+                show_volume_slider: false,
+                show_expand_button: false,
+                show_brightness_when_off: false,
+                haptic: true,
+                volume_click_control: true,
+                animation_duration: 250,
+                volume_step: 0.01,
+                secondary_info: 'Volume {volume}%',
+                timer_presets: [15, 30, 60, 120],
+                timer_action_turn_off_light: true,
+                scenes_per_row: 4,
+                show_toddler_lock: false,
+                show_clock_brightness: false,
+                show_battery_indicator: false,
+                show_battery_percentage: true,
+                controls_order: [
+                    'brightness', 'clock_brightness', 'volume_slider', 'volume_presets', 'sound', 'scenes', 'timer', 'toddler_lock'
+                ],
+            };
+            
+            if ((defaults[key] !== undefined && JSON.stringify(value) === JSON.stringify(defaults[key])) || value === null || value === '' || value === undefined) {
+                delete newConfig[key];
+            } else {
+                newConfig[key] = value;
+            }
         }
 
         const event = new CustomEvent("config-changed", {
@@ -1726,7 +1811,9 @@ class HatchCardEditor extends LitElement {
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: newConfig }, bubbles: true, composed: true }));
     }
 
-    _editScene(index) { this._editingSceneIndex = index; }
+    _editScene(index) { 
+        this._editingSceneIndex = index; 
+    }
 
     _deleteScene(index) {
         const newConfig = { ...this._config };
@@ -1754,9 +1841,9 @@ class HatchCardEditor extends LitElement {
         }
         
         if (field === 'color') value = parseColorInput(value);
-        else if (field === 'brightness' || field === 'volume') {
+        else if (field === 'brightness' || field === 'volume' || field === 'transition') {
             const numValue = parseInt(value);
-            value = (!isNaN(numValue) && numValue >= 0 && numValue <= 100) ? numValue : null;
+            value = (target.value.trim() === '' || isNaN(numValue)) ? null : (numValue >= 0 ? numValue : null);
         }
 
         const isMeaningful = value !== null && value !== undefined && value !== '';
@@ -1775,7 +1862,6 @@ class HatchCardEditor extends LitElement {
     render() {
         if (!this.hass) return html`<div>Loading...</div>`;
         if (!this._config) return html`<div>No configuration</div>`;
-        
 
         const hasLight = !!this._config.light_entity;
         const currentMediaPlayer = this._config?.media_player_entity;
@@ -1788,6 +1874,104 @@ class HatchCardEditor extends LitElement {
             timerSoundModes.unshift(selectedTimerSound);
         }
 
+        const basicSchema = [
+            {
+                name: "name",
+                label: "Name (Optional)",
+                selector: { text: {} }
+            },
+            {
+                name: "media_player_entity",
+                label: "Media Player Entity (Required)",
+                selector: { 
+                    entity: { 
+                        domain: "media_player" 
+                    } 
+                },
+                required: true
+            },
+            {
+                name: "light_entity",
+                label: "Light Entity (Optional)",
+                selector: { 
+                    entity: { 
+                        domain: "light" 
+                    } 
+                }
+            },
+            {
+                name: "icon",
+                label: "Default Icon (Optional)",
+                selector: { 
+                    icon: { 
+                        placeholder: "mdi:speaker" 
+                    } 
+                }
+            },
+            {
+                name: "user_photo",
+                label: "User Photo URL (Optional)",
+                selector: { 
+                    text: { 
+                        type: "url" 
+                    } 
+                }
+            }
+        ];
+
+        const deviceControlsSchema = [];
+        
+        if (this._config.show_toddler_lock) {
+            deviceControlsSchema.push({
+                name: "toddler_lock_entity",
+                label: "Toddler Lock Entity",
+                selector: { 
+                    entity: { 
+                        domain: "switch" 
+                    } 
+                }
+            });
+        }
+        
+        if (hasLight && this._config.show_clock_brightness) {
+            deviceControlsSchema.push({
+                name: "clock_brightness_entity",
+                label: "Clock Brightness Entity",
+                selector: { 
+                    entity: { 
+                        domain: "light" 
+                    } 
+                }
+            });
+        }
+        
+        if (this._config.show_battery_indicator) {
+            deviceControlsSchema.push(
+                {
+                    name: "battery_level_entity",
+                    label: "Battery Level Entity",
+                    selector: { entity: {} }
+                },
+                {
+                    name: "charging_status_entity",
+                    label: "Charging Status Entity",
+                    selector: { entity: {} }
+                }
+            );
+        }
+
+        const timerSchema = [
+            {
+                name: "timer_entity",
+                label: "Timer Entity (Optional)",
+                selector: { 
+                    entity: { 
+                        domain: "input_text" 
+                    } 
+                }
+            }
+        ];
+
         return html`
             <div class="card-config">
                 <div class="section">
@@ -1797,11 +1981,12 @@ class HatchCardEditor extends LitElement {
                     </div>
                     ${this._expandedSections.basic ? html`
                         <div class="section-content">
-                            <ha-textfield id="name" label="Name (Optional)" .value="${this._config?.name || ''}" @input="${this._valueChanged}" placeholder="Defaults to entity name"></ha-textfield>
-                            <ha-entity-picker .hass=${this._hass} .value=${this._config.media_player_entity} @value-changed=${this._valueChanged} label="Media Player Entity (Required)" .configValue=${"media_player_entity"} .includeDomains=${["media_player"]}></ha-entity-picker>
-                            <ha-entity-picker .hass=${this._hass} .value=${this._config.light_entity || ''} @value-changed=${this._valueChanged} label="Light Entity (Optional)" .configValue=${"light_entity"} .includeDomains=${["light"]}></ha-entity-picker>
-                            <ha-icon-picker id="icon" label="Default Icon (Optional)" .value="${this._config?.icon || ''}" @value-changed="${this._valueChanged}" .placeholder="${'mdi:speaker'}"></ha-icon-picker>
-                            <ha-textfield id="user_photo" label="User Photo URL (Optional)" .value="${this._config?.user_photo || ''}" @input="${this._valueChanged}" placeholder="/local/photo.png"></ha-textfield>
+                            <ha-form
+                                .hass=${this.hass}
+                                .data=${this._config}
+                                .schema=${basicSchema}
+                                @value-changed=${this._valueChanged}
+                            ></ha-form>
                         </div>
                     ` : ''}
                 </div>
@@ -1824,13 +2009,13 @@ class HatchCardEditor extends LitElement {
                                     <mwc-list-item value="volume">Volume Fill</mwc-list-item>
                                 </ha-select>
                             ` : ''}
-                            <ha-textfield id="secondary_info" label="Secondary Info (Optional)" .value="${this._config?.secondary_info !== undefined ? this._config.secondary_info : 'Volume {volume}%'}" @input="${this._valueChanged}" placeholder="Volume {volume}%" helper-text="Supports {volume}, {sound}, {brightness}. Leave empty to hide."></ha-textfield>
+                            <ha-textfield id="secondary_info" label="Secondary Info (Optional)" .value="${this._config?.secondary_info !== undefined ? this._config.secondary_info : 'Volume {volume}%'}" @input="${this._valueChanged}" helper="Use {volume}, {sound}, {brightness} as placeholders"></ha-textfield>
                             <ha-textfield
                                 id="controls_order"
                                 label="Expanded Controls Order (Optional)"
-                                .value="${(this._config?.controls_order || ['brightness', 'clock_brightness', 'volume_presets', 'sound', 'scenes', 'timer', 'toddler_lock']).join(', ')}"
+                                .value="${(this._config?.controls_order || ['brightness', 'clock_brightness', 'volume_slider', 'volume_presets', 'sound', 'scenes', 'timer', 'toddler_lock']).join(', ')}"
                                 @input="${this._valueChanged}"
-                                helper-text="Comma-separated list of control keys."
+                                helper="Comma-separated list of control keys."
                             ></ha-textfield>
                         </div>
                     ` : ''}
@@ -1845,14 +2030,15 @@ class HatchCardEditor extends LitElement {
                         <div class="section-content">
                             <div class="switches">
                                 <label class="switch-wrapper"><ha-switch id="show_volume_buttons" .checked="${this._config?.show_volume_buttons !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Volume Buttons</span></div></label>
-                                <label class="switch-wrapper"><ha-switch id="show_expand_button" .checked="${this._config?.show_expand_button === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Expand Button</span></div></label>
-                                <label class="switch-wrapper"><ha-switch id="show_sound_control" .checked="${this._config?.show_sound_control === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Sound Selector</span></div></label>
+                                <label class="switch-wrapper"><ha-switch id="show_volume_slider" .checked="${this._config?.show_volume_slider === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Volume Slider</span></div></label>
+                                <label class="switch-wrapper"><ha-switch id="show_expand_button" .checked="${this._config?.show_expand_button === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Expand Button</span><div class="switch-description">Hide controls behind a toggle button</div></div></label>
+                                <label class="switch-wrapper"><ha-switch id="show_sound_control" .checked="${this._config?.show_sound_control === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Sound Control</span></div></label>
                                 ${hasLight ? html`
                                     <label class="switch-wrapper"><ha-switch id="show_brightness_control" .checked="${this._config?.show_brightness_control === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Brightness Control</span></div></label>
-                                    <label class="switch-wrapper"><ha-switch id="show_brightness_when_off" .checked="${this._config?.show_brightness_when_off === true}" @change="${this._valueChanged}" .disabled="${this._config?.show_brightness_control !== true}"></ha-switch><div class="switch-label"><span>Show Brightness When Off</span></div></label>
+                                    <label class="switch-wrapper"><ha-switch id="show_brightness_when_off" .checked="${this._config?.show_brightness_when_off === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Brightness When Off</span></div></label>
                                 ` : ''}
-                                <label class="switch-wrapper"><ha-switch id="show_timer" .checked="${this._config?.show_timer === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Sleep Timer</span></div></label>
-                                <label class="switch-wrapper"><ha-switch id="show_scenes" .checked="${this._config?.show_scenes === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Scenes</span></div></label>
+                                <label class="switch-wrapper"><ha-switch id="show_timer" .checked="${this._config?.show_timer === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Timer Control</span></div></label>
+                                <label class="switch-wrapper"><ha-switch id="show_scenes" .checked="${this._config?.show_scenes === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Scene Control</span></div></label>
                             </div>
                         </div>
                     ` : ''}
@@ -1866,21 +2052,27 @@ class HatchCardEditor extends LitElement {
                     ${this._expandedSections.device_controls ? html`
                         <div class="section-content">
                             <label class="switch-wrapper"><ha-switch id="show_toddler_lock" .checked="${this._config?.show_toddler_lock}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Toddler Lock</span></div></label>
-                            ${this._config.show_toddler_lock ? html`<ha-entity-picker .hass=${this._hass} .value=${this._config.toddler_lock_entity} @value-changed=${this._valueChanged} label="Toddler Lock Entity" .configValue=${"toddler_lock_entity"} .includeDomains=${["switch"]}></ha-entity-picker>` : ''}
-
+                            
                             ${hasLight ? html`
                                 <label class="switch-wrapper"><ha-switch id="show_clock_brightness" .checked="${this._config?.show_clock_brightness}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Clock Brightness</span></div></label>
-                                ${this._config.show_clock_brightness ? html`<ha-entity-picker .hass=${this._hass} .value=${this._config.clock_brightness_entity} @value-changed=${this._valueChanged} label="Clock Brightness Entity" .configValue=${"clock_brightness_entity"} .includeDomains=${["light"]}></ha-entity-picker>` : ''}
                             ` : ''}
                             
                             <label class="switch-wrapper"><ha-switch id="show_battery_indicator" .checked="${this._config?.show_battery_indicator}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Battery Indicator</span></div></label>
+                            
                             ${this._config.show_battery_indicator ? html`
-                                <ha-entity-picker .hass=${this._hass} .value=${this._config.battery_level_entity} @value-changed=${this._valueChanged} label="Battery Level Entity" .configValue=${"battery_level_entity"} .includeDomains=${["sensor"]}></ha-entity-picker>
-                                <ha-entity-picker .hass=${this._hass} .value=${this._config.charging_status_entity} @value-changed=${this._valueChanged} label="Charging Status Entity" .configValue=${"charging_status_entity"} .includeDomains=${["binary_sensor", "sensor"]}></ha-entity-picker>
                                 <label class="switch-wrapper">
                                     <ha-switch id="show_battery_percentage" .checked="${this._config?.show_battery_percentage !== false}" @change="${this._valueChanged}"></ha-switch>
                                     <div class="switch-label"><span>Show Battery Percentage</span></div>
                                 </label>
+                            ` : ''}
+
+                            ${deviceControlsSchema.length > 0 ? html`
+                                <ha-form
+                                    .hass=${this.hass}
+                                    .data=${this._config}
+                                    .schema=${deviceControlsSchema}
+                                    @value-changed=${this._valueChanged}
+                                ></ha-form>
                             ` : ''}
                         </div>
                     ` : ''}
@@ -1895,10 +2087,10 @@ class HatchCardEditor extends LitElement {
                         <div class="section-content">
                             <label class="switch-wrapper"><ha-switch id="haptic" .checked="${this._config?.haptic !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Haptic Feedback</span></div></label>
                             ${hasLight ? html`
-                                <label class="switch-wrapper"><ha-switch id="volume_click_control" .checked="${this._config?.volume_click_control !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Volume Click Control</span></div></label>
+                                <label class="switch-wrapper"><ha-switch id="volume_click_control" .checked="${this._config?.volume_click_control !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Volume Click Control</span><div class="switch-description">Click on card background to set volume</div></div></label>
                             ` : ''}
-                            <ha-textfield id="volume_presets" label="Volume Presets (Optional)" .value="${this._config?.volume_presets ? this._config.volume_presets.join(', ') : ''}" @input="${this._valueChanged}" placeholder="0, 0.25, 0.5, 0.75, 1" helper-text="Comma-separated decimal values (0-1)"></ha-textfield>
-                            <ha-textfield id="volume_step" label="Volume Step" type="number" min="0.01" max="0.5" step="0.01" .value="${this._config?.volume_step || 0.01}" @input="${this._valueChanged}"></ha-textfield>
+                            <ha-textfield id="volume_presets" label="Volume Presets (Optional)" .value="${this._config?.volume_presets ? this._config.volume_presets.join(', ') : ''}" @input="${this._valueChanged}" helper="Comma-separated values (0.0-1.0): 0.2, 0.5, 0.8"></ha-textfield>
+                            <ha-textfield id="volume_step" label="Volume Step" type="number" min="0.01" max="0.5" step="0.01" .value="${this._config?.volume_step || 0.01}" @input="${this._valueChanged}" helper="Volume change per button press"></ha-textfield>
                             <ha-textfield id="animation_duration" label="Animation Duration (ms)" type="number" min="0" max="1000" step="50" .value="${this._config?.animation_duration || 250}" @input="${this._valueChanged}"></ha-textfield>
                         </div>
                     ` : ''}
@@ -1911,30 +2103,31 @@ class HatchCardEditor extends LitElement {
                     </div>
                     ${this._expandedSections.timer ? html`
                         <div class="section-content">
-                            <ha-entity-picker 
-                                .hass=${this._hass} 
-                                .value=${this._config.timer_entity || ''} 
-                                @value-changed=${this._valueChanged} 
-                                label="Timer Entity (Optional)" 
-                                .configValue=${"timer_entity"} 
-                                .includeDomains=${["input_text"]}
-                                helper="Create an Input Text helper to make the timer persistent across reloads."
-                            ></ha-entity-picker>
-                            <ha-textfield id="timer_presets" label="Timer Presets (minutes)" .value="${this._config?.timer_presets ? this._config.timer_presets.join(', ') : '15, 30, 60, 120'}" @input="${this._valueChanged}" placeholder="15, 30, 60, 120" helper-text="Comma-separated values in minutes"></ha-textfield>
+                            ${timerSchema.length > 0 ? html`
+                                <ha-form
+                                    .hass=${this.hass}
+                                    .data=${this._config}
+                                    .schema=${timerSchema}
+                                    @value-changed=${this._valueChanged}
+                                ></ha-form>
+                            ` : ''}
+                            <ha-textfield id="timer_presets" label="Timer Presets (minutes)" .value="${this._config?.timer_presets ? this._config.timer_presets.join(', ') : '15, 30, 60, 120'}" @input="${this._valueChanged}" helper="Comma-separated values in minutes"></ha-textfield>
                             <div class="subsection-title">Timer Expiration Actions</div>
                             ${hasLight ? html`
-                                <label class="switch-wrapper"><ha-switch id="timer_action_turn_off_light" .checked="${this._config?.timer_action_turn_off_light !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Turn off light when timer expires</span></div></label>
+                                <label class="switch-wrapper"><ha-switch id="timer_action_turn_off_light" .checked="${this._config?.timer_action_turn_off_light !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Turn Off Light</span></div></label>
                             ` : ''}
-                            <label class="switch-wrapper"><ha-switch id="timer_action_turn_off_media" .checked="${this._config?.timer_action_turn_off_media === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Stop media player when timer expires</span></div></label>
+                            <label class="switch-wrapper"><ha-switch id="timer_action_turn_off_media" .checked="${this._config?.timer_action_turn_off_media === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Turn Off Media</span></div></label>
                             ${hasLight ? html`
-                                <ha-textfield id="timer_action_light_brightness" label="Timer Light Brightness (%)" type="number" min="1" max="100" .value="${this._config?.timer_action_light_brightness || ''}" @input="${this._valueChanged}" placeholder="Leave empty to not change"></ha-textfield>
-                                <ha-textfield id="timer_action_light_color" label="Timer Light Color" .value="${this._config?.timer_action_light_color ? getColorNameFromRgb(this._config.timer_action_light_color) : ''}" @input="${this._valueChanged}" placeholder="red, or 255, 0, 0"></ha-textfield>
+                                <ha-textfield id="timer_action_light_brightness" label="Timer Light Brightness (%)" type="number" min="1" max="100" .value="${this._config?.timer_action_light_brightness ?? ''}" @input="${this._valueChanged}"></ha-textfield>
+                                <ha-textfield id="timer_action_light_color" label="Timer Light Color" .value="${this._config?.timer_action_light_color ? getColorNameFromRgb(this._config.timer_action_light_color) : ''}" @input="${this._valueChanged}" helper="Color name or RGB (255,255,255)"></ha-textfield>
                             ` : ''}
-                            <ha-select key="timer_action_sound_mode" label="Timer Sound Mode" .value="${this._config?.timer_action_sound_mode || ''}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
-                                <mwc-list-item value=""></mwc-list-item>
-                                ${timerSoundModes.map(mode => html`<mwc-list-item .value="${mode}">${mode}</mwc-list-item>`)}
-                            </ha-select>
-                            <ha-textfield id="timer_action_volume" label="Timer Volume (%)" type="number" min="0" max="100" .value="${this._config?.timer_action_volume || ''}" @input="${this._valueChanged}" placeholder="Leave empty to not change"></ha-textfield>
+                            ${baseSoundModes.length > 0 ? html`
+                                <ha-select key="timer_action_sound_mode" label="Timer Sound Mode" .value="${this._config?.timer_action_sound_mode || ''}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
+                                    <mwc-list-item value=""></mwc-list-item>
+                                    ${timerSoundModes.map(mode => html`<mwc-list-item .value="${mode}">${mode}</mwc-list-item>`)}
+                                </ha-select>
+                            ` : ''}
+                            <ha-textfield id="timer_action_volume" label="Timer Volume (%)" type="number" min="0" max="100" .value="${this._config?.timer_action_volume ?? ''}" @input="${this._valueChanged}"></ha-textfield>
                         </div>
                     ` : ''}
                 </div>
@@ -1946,7 +2139,7 @@ class HatchCardEditor extends LitElement {
                     </div>
                     ${this._expandedSections.scenes ? html`
                         <div class="section-content">
-                            <ha-textfield id="scenes_per_row" label="Scenes Per Row" type="number" min="1" max="8" .value="${this._config?.scenes_per_row || 4}" @input="${this._valueChanged}" helper-text="Number of scene buttons per row (1-8)"></ha-textfield>
+                            <ha-textfield id="scenes_per_row" label="Scenes Per Row" type="number" min="1" max="8" .value="${this._config?.scenes_per_row || 4}" @input="${this._valueChanged}" helper="Number of scene buttons per row"></ha-textfield>
                             <div class="subsection-title">Scenes</div>
                             ${this._config?.scenes && this._config.scenes.length > 0 ? html`
                                 <div class="scene-list">
@@ -1966,22 +2159,25 @@ class HatchCardEditor extends LitElement {
                                                     <ha-textfield label="Name" .value="${scene.name || ''}" @input="${(e) => this._updateScene(e, index, 'name')}" placeholder="Scene name"></ha-textfield>
                                                     <ha-icon-picker label="Icon" .value="${scene.icon || ''}" @value-changed="${(e) => this._updateScene(e, index, 'icon')}" .placeholder="${'mdi:palette'}"></ha-icon-picker>
                                                     <div class="subsection-title">Option 1: Activate HA Scene</div>
-                                                    <ha-entity-picker .hass=${this._hass} .value=${scene.entity_id} @value-changed=${(e) => this._updateScene(e, index, 'entity_id')} label="Scene Entity (Overrides Manual Controls)" .configValue=${"entity_id"} .includeDomains=${["scene"]}></ha-entity-picker>
+                                                    <ha-entity-picker .hass=${this.hass} .value=${scene.entity_id} @value-changed=${(e) => this._updateScene(e, index, 'entity_id')} label="Scene Entity (Optional)" .includeDomains=${["scene"]}></ha-entity-picker>
+                                                    <ha-textfield label="Transition (seconds)" type="number" min="0" .value="${scene.transition ?? ''}" @input="${(e) => this._updateScene(e, index, 'transition')}"></ha-textfield>
                                                     <div class="subsection-title">Option 2: Manual Controls</div>
                                                     <div class="manual-controls ${scene.entity_id ? 'disabled' : ''}">
                                                         ${hasLight ? html`
-                                                            <label class="switch-wrapper"><ha-switch .checked="${scene.turn_off_light === true}" @change="${(e) => this._updateScene(e, index, 'turn_off_light')}" ?disabled=${scene.entity_id}></ha-switch><div class="switch-label"><span>Turn Off Light</span></div></label>
+                                                            <label class="switch-wrapper"><ha-switch .checked="${scene.turn_off_light === true}" @change="${(e) => this._updateScene(e, index, 'turn_off_light')}"></ha-switch><div class="switch-label"><span>Turn Off Light</span></div></label>
                                                         ` : ''}
-                                                        <label class="switch-wrapper"><ha-switch .checked="${scene.turn_off_media === true}" @change="${(e) => this._updateScene(e, index, 'turn_off_media')}" ?disabled=${scene.entity_id}></ha-switch><div class="switch-label"><span>Turn Off Sound</span></div></label>
+                                                        <label class="switch-wrapper"><ha-switch .checked="${scene.turn_off_media === true}" @change="${(e) => this._updateScene(e, index, 'turn_off_media')}"></ha-switch><div class="switch-label"><span>Turn Off Media</span></div></label>
                                                         ${hasLight ? html`
-                                                            <ha-textfield label="Color" .value="${scene.color ? getColorNameFromRgb(scene.color) : ''}" @input="${(e) => this._updateScene(e, index, 'color')}" placeholder="red, green, or 255, 0, 0" ?disabled=${scene.entity_id || scene.turn_off_light}></ha-textfield>
-                                                            <ha-textfield label="Brightness (%)" type="number" min="1" max="100" .value="${scene.brightness || ''}" @input="${(e) => this._updateScene(e, index, 'brightness')}" placeholder="Leave empty for no change" ?disabled=${scene.entity_id || scene.turn_off_light}></ha-textfield>
+                                                            <ha-textfield label="Color" .value="${scene.color ? getColorNameFromRgb(scene.color) : ''}" @input="${(e) => this._updateScene(e, index, 'color')}" helper="Color name or RGB (255,255,255)"></ha-textfield>
+                                                            <ha-textfield label="Brightness (%)" type="number" min="1" max="100" .value="${scene.brightness ?? ''}" @input="${(e) => this._updateScene(e, index, 'brightness')}"></ha-textfield>
                                                         ` : ''}
-                                                        <ha-select label="Sound Mode" .value="${scene.sound_mode || ''}" @change="${(e) => this._updateScene(e, index, 'sound_mode')}" @closed="${(e) => e.stopPropagation()}" ?disabled=${scene.entity_id || scene.turn_off_media}>
-                                                            <mwc-list-item value=""></mwc-list-item>
-                                                            ${sceneSoundModes.map(mode => html`<mwc-list-item .value="${mode}">${mode}</mwc-list-item>`)}
-                                                        </ha-select>
-                                                        <ha-textfield label="Volume (%)" type="number" min="0" max="100" .value="${scene.volume || ''}" @input="${(e) => this._updateScene(e, index, 'volume')}" placeholder="Leave empty for no change" ?disabled=${scene.entity_id || scene.turn_off_media}></ha-textfield>
+                                                        ${baseSoundModes.length > 0 ? html`
+                                                            <ha-select label="Sound Mode" .value="${scene.sound_mode || ''}" @change="${(e) => this._updateScene(e, index, 'sound_mode')}" @closed="${(e) => e.stopPropagation()}">
+                                                                <mwc-list-item value=""></mwc-list-item>
+                                                                ${sceneSoundModes.map(mode => html`<mwc-list-item .value="${mode}">${mode}</mwc-list-item>`)}
+                                                            </ha-select>
+                                                        ` : ''}
+                                                        <ha-textfield label="Volume (%)" type="number" min="0" max="100" .value="${scene.volume ?? ''}" @input="${(e) => this._updateScene(e, index, 'volume')}"></ha-textfield>
                                                     </div>
                                                     <button class="done-button" @click="${() => this._editingSceneIndex = null}">Done</button>
                                                 </div>
@@ -2002,14 +2198,14 @@ class HatchCardEditor extends LitElement {
         return css`
             .card-config { display: flex; flex-direction: column; gap: 4px; }
             .section { background: var(--card-background-color); border-radius: 8px; overflow: hidden; margin-bottom: 4px; }
-            .section-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; cursor: pointer; user-select: none; background: var(--card-background-color); transition: background-color 0.1s; }
+            .section-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; cursor: pointer; user-select: none; background: var(--card-background-color); transition: background-color 0.2s; }
             .section-header:hover { background: rgba(var(--rgb-primary-text-color), 0.04); }
             .section-title { font-weight: 500; font-size: 15px; color: var(--primary-text-color); margin: 0; }
             .section-header ha-icon { color: var(--secondary-text-color); transition: transform 0.2s; }
             .section-content { padding: 0 16px 16px 16px; display: flex; flex-direction: column; gap: 16px; animation: slideDown 0.2s ease-out; }
             @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
             .subsection-title { font-weight: 500; margin-top: 8px; margin-bottom: -8px; color: var(--primary-text-color); font-size: 0.9rem; }
-            ha-select, ha-textfield, ha-entity-picker { width: 100%; }
+            ha-select, ha-textfield, ha-entity-picker, ha-icon-picker { width: 100%; }
             .switches { display: flex; flex-direction: column; gap: 12px; }
             .switch-wrapper { display: flex; align-items: center; gap: 16px; cursor: pointer; padding: 4px 0; }
             .switch-label { display: flex; flex-direction: column; flex: 1; }
@@ -2027,7 +2223,7 @@ class HatchCardEditor extends LitElement {
             .scene-edit { padding: 16px; background: rgba(var(--rgb-primary-text-color), 0.02); display: flex; flex-direction: column; gap: 12px; animation: slideDown 0.2s ease-out; }
             .manual-controls.disabled { opacity: 0.4; pointer-events: none; }
             .no-scenes { text-align: center; color: var(--secondary-text-color); padding: 24px; font-style: italic; }
-            .add-scene-button, .done-button { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 2px dashed var(--divider-color); border-radius: 8px; background: transparent; color: var(--primary-text-color); font-weight: 500; cursor: pointer; transition: all 0.2s; }
+            .add-scene-button, .done-button { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 2px dashed var(--divider-color); border-radius: 8px; background: transparent; color: var(--primary-text-color); cursor: pointer; transition: all 0.2s; }
             .done-button { border-style: solid; background: var(--primary-color); color: white; }
             .add-scene-button:hover { border-color: var(--primary-color); background: rgba(var(--rgb-primary-color), 0.1); }
             .done-button:hover { opacity: 0.9; }
@@ -2037,6 +2233,70 @@ class HatchCardEditor extends LitElement {
 }
 
 customElements.define("hatch-card", HatchCard);
+
+const registerEditor = () => {
+    const isEditorReady = !!(
+        customElements.get("ha-entity-picker") || 
+        customElements.get("hui-entity-editor") ||
+        customElements.get("hui-card-element-editor") ||
+        window.customElements.get("ha-form")
+    );
+    
+    if (isEditorReady && !customElements.get("hatch-card-editor")) {
+        customElements.define("hatch-card-editor", HatchCardEditor);
+    } else if (!isEditorReady) {
+
+        setTimeout(registerEditor, 100);
+    }
+};
+
+registerEditor();
+
+window.addEventListener("location-changed", () => {
+    setTimeout(registerEditor, 100);
+});
+
+HatchCard.getConfigElement = function() {
+    registerEditor(); 
+    
+    if (customElements.get("hatch-card-editor")) {
+        return document.createElement("hatch-card-editor");
+    } else {
+        const placeholder = document.createElement("div");
+        placeholder.innerHTML = "Loading editor...";
+        
+        const checkInterval = setInterval(() => {
+            if (customElements.get("hatch-card-editor")) {
+                clearInterval(checkInterval);
+                const editor = document.createElement("hatch-card-editor");
+                placeholder.replaceWith(editor);
+                if (placeholder._config) {
+                    editor.setConfig(placeholder._config);
+                }
+                if (placeholder._hass) {
+                    editor.hass = placeholder._hass;
+                }
+            }
+        }, 100);
+        
+        const originalSetConfig = placeholder.setConfig;
+        placeholder.setConfig = function(config) {
+            placeholder._config = config;
+            if (originalSetConfig) originalSetConfig.call(placeholder, config);
+        };
+        
+        Object.defineProperty(placeholder, 'hass', {
+            set: function(hass) {
+                placeholder._hass = hass;
+            },
+            get: function() {
+                return placeholder._hass;
+            }
+        });
+        
+        return placeholder;
+    }
+};
 
 setTimeout(() => {
     window.customCards = window.customCards || [];

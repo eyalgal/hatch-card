@@ -31,10 +31,11 @@ A sleek, modern, and highly customizable Lovelace card to control your Hatch Res
 * **Custom Icons & Photos:** Use dynamic icons that change with the sound, set your own static icon, or even use a photo for a personal touch.  
 * **Easy Configuration:** Fully configurable through the Lovelace visual UI editor.  
 * **Haptic Feedback:** Get optional tactile feedback on mobile devices when you interact with the card.
-* **Volume Slider (NEW in v1.2.1):** Add a volume slider to the expanded controls for finer volume adjustment.
-* **Custom Controls Order (NEW in v1.2.1):** You can now fully customize the order of expanded controls, including the new slider.
-* **Improved Scene Actions (v1.2.1):** Scenes now support transition times and better input handling.
-* **Better Timer Actions (v1.2.1):** Timer expiration options now reliably handle empty values and transitions.
+* **Volume Slider:** Add a volume slider to the expanded controls for finer volume adjustment.
+* **Custom Controls Order:** You can now fully customize the order of expanded controls, including the new slider.
+* **Improved Scene Actions:** Scenes now support transition times and better input handling.
+* **Synchronized Timers Across Dashboards:** Timers are now fully synchronized. When using a `timer_entity`, the card saves both the countdown and the specific end-actions (light color, sound, etc.) to a central helper. Set a timer on any device, and all other cards will stay in sync.  
+**Persistent & Intelligent Timer Actions:** The last used timer actions are now saved and become the default for the next timer, ensuring a consistent experience. The editor also reads this shared state, so your configuration is always transparent.
 
 ## **✅ Requirements**
 
@@ -84,7 +85,7 @@ _or_
 | `show_toddler_lock`       | `boolean` | `false`             | Show the toddler-lock toggle (requires `toddler_lock_entity`).                                 |
 | `show_clock_brightness`   | `boolean` | `false`             | Show the clock-brightness slider (requires `clock_brightness_entity`).                         |
 | `show_battery_indicator`  | `boolean` | `false`             | Show the battery indicator (requires `battery_level_entity`).                                  |
-| `timer_entity`            | `string`  | `null`              | Entity ID for an `input_text` helper to make the timer persistent.                             |
+| `timer_entity`            | `string`  | `null`              | Entity ID for an `input_text` helper. **Required for timer synchronization across devices**.   |
 | `toddler_lock_entity`     | `string`  | `null`              | Entity ID for the toddler-lock switch entity.                                                  |
 | `clock_brightness_entity` | `string`  | `null`              | Entity ID for the clock-brightness light entity.                                               |
 | `battery_level_entity`    | `string`  | `null`              | Entity ID for the battery-level sensor entity.                                                 |

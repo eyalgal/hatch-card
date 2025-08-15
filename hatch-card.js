@@ -5,7 +5,7 @@
  *
  * Author: eyalgal
  * License: MIT
- * Version: 1.2.1
+ * Version: 1.2.2
  */
 import {
     LitElement,
@@ -13,7 +13,7 @@ import {
     css
 } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
 
-const cardVersion = "1.2.1";
+const cardVersion = "1.2.2";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {
@@ -247,47 +247,67 @@ class HatchCard extends LitElement {
                 const state = this.hass.states[this._config.timer_entity].state;
                 if (state && state !== 'unknown' && state !== '') {
                     const data = JSON.parse(state);
-                    if (data.end && data.duration) {
+                    if (data && data.timer) {
+                        this._localTimerEnd = null;
+                        this._localTimerDuration = null;
                         return data;
                     }
                 }
             } catch (e) {
                 console.error("Hatch Card: Invalid timer_entity state. Must be a JSON string.", e);
-                return null;
             }
         }
+        
         return {
-            end: this._localTimerEnd,
-            duration: this._localTimerDuration
+            timer: {
+                end: this._localTimerEnd,
+                duration: this._localTimerDuration,
+            },
+            actions: {
+                turn_off_light: this._config.timer_action_turn_off_light,
+                turn_off_media: this._config.timer_action_turn_off_media,
+                light_color: this._config.timer_action_light_color,
+                light_brightness: this._config.timer_action_light_brightness,
+                sound_mode: this._config.timer_action_sound_mode,
+                volume: this._config.timer_action_volume,
+            }
         };
     }
 
     _updateTimer() {
-        const timerData = this._getTimerData();
+        const fullTimerData = this._getTimerData();
+        const timer = fullTimerData?.timer;
+        const endTime = timer?.e || timer?.end;
+        const duration = timer?.d || timer?.duration;
 
-        if (!timerData || !timerData.end) {
+        if (!endTime) {
             this._timerRemaining = '';
             this._timerPercent = 0;
             return;
         }
 
         const now = Date.now();
-        const remaining = Math.max(0, timerData.end - now);
+        const remaining = Math.max(0, endTime - now);
 
         if (remaining === 0) {
             this._timerRemaining = '';
             this._timerPercent = 0;
+
             if (this._config.timer_entity) {
-                this.hass.callService("input_text", "set_value", {
-                    entity_id: this._config.timer_entity,
-                    value: ""
-                });
+                const state = this.hass.states[this._config.timer_entity].state;
+                if (state && state !== 'unknown' && state !== '') {
+                    this._cancelTimer(); 
+                    this._executeTimerActions(fullTimerData);
+                }
+            } else {
+                this._localTimerEnd = null;
+                this._localTimerDuration = null;
+                this._executeTimerActions(fullTimerData);
             }
-            this._executeTimerActions();
             return;
         }
 
-        const totalDuration = timerData.duration || 60000;
+        const totalDuration = duration || 60000;
         this._timerPercent = (remaining / totalDuration) * 100;
 
         const minutes = Math.floor(remaining / 60000);
@@ -1121,15 +1141,35 @@ class HatchCard extends LitElement {
         const durationInMillis = minutes * 60000;
         const endTime = Date.now() + durationInMillis;
 
+        this._localTimerEnd = endTime;
+        this._localTimerDuration = durationInMillis;
+        this._timerRemaining = `${minutes}:00`;
+        this._timerPercent = 100;
+        this.requestUpdate();
+
         if (this._config.timer_entity) {
-            const timerData = JSON.stringify({ end: endTime, duration: durationInMillis });
+            const newActions = {};
+            if (this._config.timer_action_turn_off_light === false) newActions.tol = false;
+            if (this._config.timer_action_turn_off_media === true) newActions.tom = true;
+            if (this._config.timer_action_light_color) newActions.lc = this._config.timer_action_light_color;
+            if (this._config.timer_action_light_brightness !== null) newActions.lb = this._config.timer_action_light_brightness;
+            if (this._config.timer_action_sound_mode) newActions.sm = this._config.timer_action_sound_mode;
+            if (this._config.timer_action_volume !== null) newActions.v = this._config.timer_action_volume;
+
+            const timerPayload = {
+                timer: {
+                    e: endTime,
+                    d: durationInMillis, 
+                },
+                actions: newActions
+            };
+
+            const timerData = JSON.stringify(timerPayload);
+            
             this.hass.callService("input_text", "set_value", {
                 entity_id: this._config.timer_entity,
                 value: timerData
             });
-        } else {
-            this._localTimerEnd = endTime;
-            this._localTimerDuration = durationInMillis;
         }
 
         if (this.hass.services.hatch?.set_timer) {
@@ -1142,14 +1182,28 @@ class HatchCard extends LitElement {
 
     _cancelTimer() {
         this._vibrate();
+
+        this._localTimerEnd = null;
+        this._localTimerDuration = null;
+        this.requestUpdate();
+
         if (this._config.timer_entity) {
-            this.hass.callService("input_text", "set_value", {
-                entity_id: this._config.timer_entity,
-                value: ""
-            });
-        } else {
-            this._localTimerEnd = null;
-            this._localTimerDuration = null;
+            try {
+                const state = this.hass.states[this._config.timer_entity].state;
+                if (state && state !== 'unknown' && state !== '') {
+                    const data = JSON.parse(state);
+                    delete data.timer;
+                    this.hass.callService("input_text", "set_value", {
+                        entity_id: this._config.timer_entity,
+                        value: JSON.stringify(data)
+                    });
+                }
+            } catch (e) {
+                this.hass.callService("input_text", "set_value", {
+                    entity_id: this._config.timer_entity,
+                    value: ""
+                });
+            }
         }
 
         if (this.hass.services.hatch?.cancel_timer) {
@@ -1213,39 +1267,49 @@ class HatchCard extends LitElement {
         }
     }
 
-    _executeTimerActions() {
+    _executeTimerActions(timerData) {
         if (!this.hass) return;
 
-        const hasLight = !!this._config.light_entity;
-        const willStopMedia = this._config.timer_action_turn_off_media;
-        const hasLightChanges = this._config.timer_action_light_color || this._config.timer_action_light_brightness !== null;
+        const rawActions = timerData?.a || timerData?.actions || {}; 
+        const actions = {
+            turn_off_light: rawActions.tol ?? (rawActions.turn_off_light ?? true),
+            turn_off_media: rawActions.tom ?? (rawActions.turn_off_media ?? false),
+            light_color: rawActions.lc ?? (rawActions.light_color ?? null),
+            light_brightness: rawActions.lb ?? (rawActions.light_brightness ?? null),
+            sound_mode: rawActions.sm ?? (rawActions.sound_mode ?? null),
+            volume: rawActions.v ?? (rawActions.volume ?? null),
+        };
 
-        if (hasLight && this._config.timer_action_turn_off_light) {
+        const hasLight = !!this._config.light_entity;
+        const willStopMedia = actions.turn_off_media;
+        const hasLightChanges = actions.light_color || actions.light_brightness !== null;
+
+        if (hasLight && actions.turn_off_light) {
             this.hass.callService("light", "turn_off", { entity_id: this._config.light_entity });
         }
 
         if (willStopMedia) {
             this.hass.callService("media_player", "media_stop", { entity_id: this._config.media_player_entity });
             this.hass.callService("media_player", "volume_set", { entity_id: this._config.media_player_entity, volume_level: 0 });
-        } else if (this._config.timer_action_sound_mode) {
-            this.hass.callService("media_player", "select_sound_mode", { entity_id: this._config.media_player_entity, sound_mode: this._config.timer_action_sound_mode });
+        } else if (actions.sound_mode) {
+            this.hass.callService("media_player", "select_sound_mode", { entity_id: this._config.media_player_entity, sound_mode: actions.sound_mode });
         }
 
-        if (!willStopMedia && this._config.timer_action_volume !== null && this._config.timer_action_volume !== '') {
-            const volume = parseFloat(this._config.timer_action_volume) / 100;
+        if (!willStopMedia && actions.volume !== null && actions.volume !== '') {
+            const volume = parseFloat(actions.volume) / 100;
             this.hass.callService("media_player", "volume_set", { entity_id: this._config.media_player_entity, volume_level: Math.max(0, Math.min(1, volume)) });
         }
 
-        if (hasLight && !this._config.timer_action_turn_off_light && hasLightChanges) {
+        if (hasLight && !actions.turn_off_light && hasLightChanges) {
             const executeLight = () => {
                 const lightData = {};
                 let hasChanges = false;
-                if (this._config.timer_action_light_brightness !== null) {
-                    lightData.brightness_pct = parseInt(this._config.timer_action_light_brightness);
+                if (actions.light_brightness !== null) {
+                    lightData.brightness_pct = parseInt(actions.light_brightness);
                     hasChanges = true;
                 }
-                if (this._config.timer_action_light_color && Array.isArray(this._config.timer_action_light_color)) {
-                    lightData.rgb_color = this._config.timer_action_light_color;
+                if (actions.light_color && Array.isArray(actions.light_color)) {
+                    lightData.rgb_color = actions.light_color;
                     hasChanges = true;
                 }
                 if (hasChanges) {
@@ -1769,6 +1833,10 @@ class HatchCardEditor extends LitElement {
                 layout: 'horizontal',
                 show_volume_buttons: true,
                 show_volume_slider: false,
+                show_sound_control: false,
+                show_brightness_control: false,
+                show_timer: false,
+                show_scenes: false,
                 show_expand_button: false,
                 show_brightness_when_off: false,
                 haptic: true,
@@ -1778,6 +1846,7 @@ class HatchCardEditor extends LitElement {
                 secondary_info: 'Volume {volume}%',
                 timer_presets: [15, 30, 60, 120],
                 timer_action_turn_off_light: true,
+                timer_action_turn_off_media: false,
                 scenes_per_row: 4,
                 show_toddler_lock: false,
                 show_clock_brightness: false,
@@ -1872,6 +1941,26 @@ class HatchCardEditor extends LitElement {
         const selectedTimerSound = this._config?.timer_action_sound_mode;
         if (selectedTimerSound && !timerSoundModes.includes(selectedTimerSound)) {
             timerSoundModes.unshift(selectedTimerSound);
+        }
+
+        let displayConfig = { ...this._config };
+        if (this._config.timer_entity && this.hass.states[this._config.timer_entity]) {
+            try {
+                const state = this.hass.states[this._config.timer_entity].state;
+                if (state && state !== 'unknown' && state !== '') {
+                    const helperState = JSON.parse(state);
+                    const rawActions = helperState.a || helperState.actions;
+                    if (rawActions) {
+                        displayConfig.timer_action_turn_off_light = rawActions.tol ?? (rawActions.turn_off_light ?? true);
+                        displayConfig.timer_action_turn_off_media = rawActions.tom ?? (rawActions.turn_off_media ?? false);
+                        displayConfig.timer_action_light_color = rawActions.lc ?? (rawActions.light_color ?? null);
+                        displayConfig.timer_action_light_brightness = rawActions.lb ?? (rawActions.light_brightness ?? null);
+                        displayConfig.timer_action_sound_mode = rawActions.sm ?? (rawActions.sound_mode ?? null);
+                        displayConfig.timer_action_volume = rawActions.v ?? (rawActions.volume ?? null);
+                    }
+                }
+            } catch (e) {
+            }
         }
 
         const basicSchema = [
@@ -2111,23 +2200,23 @@ class HatchCardEditor extends LitElement {
                                     @value-changed=${this._valueChanged}
                                 ></ha-form>
                             ` : ''}
-                            <ha-textfield id="timer_presets" label="Timer Presets (minutes)" .value="${this._config?.timer_presets ? this._config.timer_presets.join(', ') : '15, 30, 60, 120'}" @input="${this._valueChanged}" helper="Comma-separated values in minutes"></ha-textfield>
+                            <ha-textfield id="timer_presets" label="Timer Presets (minutes)" .value="${displayConfig.timer_presets ? displayConfig.timer_presets.join(', ') : '15, 30, 60, 120'}" @input="${this._valueChanged}" helper="Comma-separated values in minutes"></ha-textfield>
                             <div class="subsection-title">Timer Expiration Actions</div>
                             ${hasLight ? html`
-                                <label class="switch-wrapper"><ha-switch id="timer_action_turn_off_light" .checked="${this._config?.timer_action_turn_off_light !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Turn Off Light</span></div></label>
+                                <label class="switch-wrapper"><ha-switch id="timer_action_turn_off_light" .checked="${displayConfig.timer_action_turn_off_light !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Turn Off Light</span></div></label>
                             ` : ''}
-                            <label class="switch-wrapper"><ha-switch id="timer_action_turn_off_media" .checked="${this._config?.timer_action_turn_off_media === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Turn Off Media</span></div></label>
+                            <label class="switch-wrapper"><ha-switch id="timer_action_turn_off_media" .checked="${displayConfig.timer_action_turn_off_media === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Turn Off Media</span></div></label>
                             ${hasLight ? html`
-                                <ha-textfield id="timer_action_light_brightness" label="Timer Light Brightness (%)" type="number" min="1" max="100" .value="${this._config?.timer_action_light_brightness ?? ''}" @input="${this._valueChanged}"></ha-textfield>
-                                <ha-textfield id="timer_action_light_color" label="Timer Light Color" .value="${this._config?.timer_action_light_color ? getColorNameFromRgb(this._config.timer_action_light_color) : ''}" @input="${this._valueChanged}" helper="Color name or RGB (255,255,255)"></ha-textfield>
+                                <ha-textfield id="timer_action_light_brightness" label="Timer Light Brightness (%)" type="number" min="1" max="100" .value="${displayConfig.timer_action_light_brightness ?? ''}" @input="${this._valueChanged}"></ha-textfield>
+                                <ha-textfield id="timer_action_light_color" label="Timer Light Color" .value="${displayConfig.timer_action_light_color ? getColorNameFromRgb(displayConfig.timer_action_light_color) : ''}" @input="${this._valueChanged}" helper="Color name or RGB (255,255,255)"></ha-textfield>
                             ` : ''}
                             ${baseSoundModes.length > 0 ? html`
-                                <ha-select key="timer_action_sound_mode" label="Timer Sound Mode" .value="${this._config?.timer_action_sound_mode || ''}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
+                                <ha-select key="timer_action_sound_mode" label="Timer Sound Mode" .value="${displayConfig.timer_action_sound_mode || ''}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
                                     <mwc-list-item value=""></mwc-list-item>
                                     ${timerSoundModes.map(mode => html`<mwc-list-item .value="${mode}">${mode}</mwc-list-item>`)}
                                 </ha-select>
                             ` : ''}
-                            <ha-textfield id="timer_action_volume" label="Timer Volume (%)" type="number" min="0" max="100" .value="${this._config?.timer_action_volume ?? ''}" @input="${this._valueChanged}"></ha-textfield>
+                            <ha-textfield id="timer_action_volume" label="Timer Volume (%)" type="number" min="0" max="100" .value="${displayConfig.timer_action_volume ?? ''}" @input="${this._valueChanged}"></ha-textfield>
                         </div>
                     ` : ''}
                 </div>

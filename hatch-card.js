@@ -5,7 +5,7 @@
  *
  * Author: eyalgal
  * License: MIT
- * Version: 1.2.2
+ * Version: 1.3.2
  */
 import {
     LitElement,
@@ -13,7 +13,7 @@ import {
     css
 } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
 
-const cardVersion = "1.2.2";
+const cardVersion = "1.3.2";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {
@@ -687,6 +687,7 @@ class HatchCard extends LitElement {
                 label="Sound"
                 .value="${selectedOption}"
                 @selected="${this._handleSoundChange}"
+                @closed="${(e) => e.stopPropagation()}"
                 style="flex: 1;"
             >
                 ${fullSoundList.map(option => html`<mwc-list-item .value="${option}">${option === 'NONE' ? 'No Sound' : option}</mwc-list-item>`)}
@@ -1804,7 +1805,7 @@ class HatchCardEditor extends LitElement {
             if (target.tagName === 'HA-SWITCH') {
                 value = target.checked;
             } else if (target.tagName === 'HA-SELECT' || target.tagName === 'HA-ENTITY-PICKER') {
-                value = e.detail?.value ?? target.value;
+                value = e.detail?.value ?? target.value ?? target.selected;
             } else if (target.tagName === 'HA-ICON-PICKER') {
                 value = e.detail?.value || '';
             } else if (key === 'volume_presets') {
@@ -1902,7 +1903,7 @@ class HatchCardEditor extends LitElement {
         if (target.tagName === 'HA-SWITCH') {
             value = target.checked;
         } else if (target.tagName === 'HA-SELECT') {
-            value = e.detail?.value ?? target.value;
+            value = e.detail?.value ?? target.value ?? target.selected;
         } else if (target.tagName === 'HA-ICON-PICKER') {
             value = e.detail?.value || '';
         } else {
@@ -2087,12 +2088,12 @@ class HatchCardEditor extends LitElement {
                     </div>
                     ${this._expandedSections.layout ? html`
                         <div class="section-content">
-                            <ha-select key="layout" label="Layout" .value="${this._config?.layout || 'horizontal'}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
+                            <ha-select key="layout" label="Layout" .value="${this._config?.layout || 'horizontal'}" @selected="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
                                 <mwc-list-item value="horizontal">Horizontal</mwc-list-item>
                                 <mwc-list-item value="vertical">Vertical</mwc-list-item>
                             </ha-select>
                             ${hasLight ? html`
-                                <ha-select key="background_mode" label="Background Mode" .value="${this._config?.background_mode || 'full'}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
+                                <ha-select key="background_mode" label="Background Mode" .value="${this._config?.background_mode || 'full'}" @selected="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
                                     <mwc-list-item value="none">None</mwc-list-item>
                                     <mwc-list-item value="full">Full Color</mwc-list-item>
                                     <mwc-list-item value="volume">Volume Fill</mwc-list-item>
@@ -2211,7 +2212,7 @@ class HatchCardEditor extends LitElement {
                                 <ha-textfield id="timer_action_light_color" label="Timer Light Color" .value="${displayConfig.timer_action_light_color ? getColorNameFromRgb(displayConfig.timer_action_light_color) : ''}" @input="${this._valueChanged}" helper="Color name or RGB (255,255,255)"></ha-textfield>
                             ` : ''}
                             ${baseSoundModes.length > 0 ? html`
-                                <ha-select key="timer_action_sound_mode" label="Timer Sound Mode" .value="${displayConfig.timer_action_sound_mode || ''}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
+                                <ha-select key="timer_action_sound_mode" label="Timer Sound Mode" .value="${displayConfig.timer_action_sound_mode || ''}" @selected="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
                                     <mwc-list-item value=""></mwc-list-item>
                                     ${timerSoundModes.map(mode => html`<mwc-list-item .value="${mode}">${mode}</mwc-list-item>`)}
                                 </ha-select>
@@ -2261,7 +2262,7 @@ class HatchCardEditor extends LitElement {
                                                             <ha-textfield label="Brightness (%)" type="number" min="1" max="100" .value="${scene.brightness ?? ''}" @input="${(e) => this._updateScene(e, index, 'brightness')}"></ha-textfield>
                                                         ` : ''}
                                                         ${baseSoundModes.length > 0 ? html`
-                                                            <ha-select label="Sound Mode" .value="${scene.sound_mode || ''}" @change="${(e) => this._updateScene(e, index, 'sound_mode')}" @closed="${(e) => e.stopPropagation()}">
+                                                            <ha-select label="Sound Mode" .value="${scene.sound_mode || ''}" @selected="${(e) => this._updateScene(e, index, 'sound_mode')}" @closed="${(e) => e.stopPropagation()}">
                                                                 <mwc-list-item value=""></mwc-list-item>
                                                                 ${sceneSoundModes.map(mode => html`<mwc-list-item .value="${mode}">${mode}</mwc-list-item>`)}
                                                             </ha-select>

@@ -16,7 +16,6 @@ A sleek, modern, and highly customizable Lovelace card to control your Hatch Res
 [](https://www.google.com/search?q=https://github.com/eyalgal/hatch-card/releases)
 [](https://www.google.com/search?q=https://github.com/eyalgal/hatch-card/actions/workflows/release.yml)
 
-> **Note**
 > This card was built for and tested with the **Hatch Rest+**. It may work with other Hatch products (like the Rest, Rest Mini, or Restore) if they are supported by the underlying Hatch integration, but functionality is not guaranteed. The card is also flexible enough to be used with other sound and light devices from different brands.
 
 ## **✨ Features**

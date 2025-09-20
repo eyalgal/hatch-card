@@ -5,7 +5,7 @@
  *
  * Author: eyalgal
  * License: MIT
- * Version: 1.2.2
+ * Version: 1.2.3
  */
 import {
     LitElement,
@@ -13,7 +13,7 @@ import {
     css
 } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
 
-const cardVersion = "1.2.2";
+const cardVersion = "1.2.3";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {
@@ -1856,8 +1856,22 @@ class HatchCardEditor extends LitElement {
                     'brightness', 'clock_brightness', 'volume_slider', 'volume_presets', 'sound', 'scenes', 'timer', 'toddler_lock'
                 ],
             };
+
+            const booleanFieldsWithTrueDefaults = [
+                'show_volume_buttons',
+                'haptic',
+                'volume_click_control',
+                'timer_action_turn_off_light',
+                'show_battery_percentage'
+            ];
             
-            if ((defaults[key] !== undefined && JSON.stringify(value) === JSON.stringify(defaults[key])) || value === null || value === '' || value === undefined) {
+            if (booleanFieldsWithTrueDefaults.includes(key)) {
+                if (value === true) {
+                    delete newConfig[key];
+                } else {
+                    newConfig[key] = value;
+                }
+            } else if ((defaults[key] !== undefined && JSON.stringify(value) === JSON.stringify(defaults[key])) || value === null || value === '' || value === undefined) {
                 delete newConfig[key];
             } else {
                 newConfig[key] = value;

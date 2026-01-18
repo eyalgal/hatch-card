@@ -5,7 +5,7 @@
  *
  * Author: eyalgal
  * License: MIT
- * Version: 1.2.3
+ * Version: 1.3.0
  */
 import {
     LitElement,
@@ -13,7 +13,7 @@ import {
     css
 } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
 
-const cardVersion = "1.2.3";
+const cardVersion = "1.3.0";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {
@@ -50,6 +50,29 @@ function formatTimerDuration(minutes) {
         return `${Math.floor(minutes / 60)}h${minutes % 60}m`;
     }
 }
+
+
+function _parseHADurationToSeconds(str) {
+    if (!str || typeof str !== 'string') return null;
+    const m = str.trim().match(/^(\d+):(\d{2}):(\d{2})$/);
+    if (!m) return null;
+    const h = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    const s = parseInt(m[3], 10);
+    if ([h, mm, s].some(v => isNaN(v))) return null;
+    return h * 3600 + mm * 60 + s;
+}
+
+function _formatClockFromSeconds(totalSeconds) {
+    const s = Math.max(0, Math.floor(totalSeconds || 0));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    if (h > 0) return `${h}:${pad(m)}:${pad(ss)}`;
+    return `${m}:${pad(ss)}`;
+}
+
 
 const COLOR_NAMES = {
     'red': [255, 0, 0],
@@ -120,14 +143,12 @@ class HatchCard extends LitElement {
             _config: {},
             _timerRemaining: { type: String },
             _timerPercent: { type: Number },
-            _showControls: { type: Boolean },
-            _localTimerEnd: { type: Number },
-            _localTimerDuration: { type: Number },
-        };
+            _showControls: { type: Boolean },        };
     }
 
     constructor() {
         super();
+        this._holdFired = false;
         this._timerRemaining = '';
         this._timerPercent = 0;
         this._showControls = false;
@@ -136,8 +157,6 @@ class HatchCard extends LitElement {
         this._tapTimer = null;
         this._tapCount = 0;
         this._userProvidedIcon = null;
-        this._localTimerEnd = null;
-        this._localTimerDuration = null;
     }
 
     setConfig(config) {
@@ -154,6 +173,7 @@ class HatchCard extends LitElement {
             show_brightness_when_off: false,
             show_timer: false,
             timer_entity: null,
+            sync_hatch_timer: true,
             show_scenes: false,
             show_toddler_lock: false,
             toddler_lock_entity: null,
@@ -175,12 +195,6 @@ class HatchCard extends LitElement {
             double_tap_action: { action: "none" },
             volume_click_control: true,
             timer_presets: [15, 30, 60, 120],
-            timer_action_turn_off_light: true,
-            timer_action_turn_off_media: false,
-            timer_action_light_color: null,
-            timer_action_light_brightness: null,
-            timer_action_sound_mode: null,
-            timer_action_volume: null,
             scenes: [],
             scenes_per_row: 4,
             controls_order: [
@@ -241,78 +255,55 @@ class HatchCard extends LitElement {
         }
     }
 
-    _getTimerData() {
-        if (this._config.timer_entity && this.hass.states[this._config.timer_entity]) {
-            try {
-                const state = this.hass.states[this._config.timer_entity].state;
-                if (state && state !== 'unknown' && state !== '') {
-                    const data = JSON.parse(state);
-                    if (data && data.timer) {
-                        this._localTimerEnd = null;
-                        this._localTimerDuration = null;
-                        return data;
-                    }
-                }
-            } catch (e) {
-                console.error("Hatch Card: Invalid timer_entity state. Must be a JSON string.", e);
-            }
-        }
-        
-        return {
-            timer: {
-                end: this._localTimerEnd,
-                duration: this._localTimerDuration,
-            },
-            actions: {
-                turn_off_light: this._config.timer_action_turn_off_light,
-                turn_off_media: this._config.timer_action_turn_off_media,
-                light_color: this._config.timer_action_light_color,
-                light_brightness: this._config.timer_action_light_brightness,
-                sound_mode: this._config.timer_action_sound_mode,
-                volume: this._config.timer_action_volume,
-            }
-        };
+    _getTimerEntity() {
+        const id = this._config.timer_entity;
+        if (!id) return null;
+        return this.hass?.states?.[id] || null;
     }
 
     _updateTimer() {
-        const fullTimerData = this._getTimerData();
-        const timer = fullTimerData?.timer;
-        const endTime = timer?.e || timer?.end;
-        const duration = timer?.d || timer?.duration;
-
-        if (!endTime) {
+        const timerEntity = this._getTimerEntity();
+        if (!timerEntity || !timerEntity.attributes) {
             this._timerRemaining = '';
             this._timerPercent = 0;
             return;
         }
 
-        const now = Date.now();
-        const remaining = Math.max(0, endTime - now);
+        const state = timerEntity.state;
+        const durationSeconds = _parseHADurationToSeconds(timerEntity.attributes.duration) || null;
 
-        if (remaining === 0) {
-            this._timerRemaining = '';
-            this._timerPercent = 0;
-
-            if (this._config.timer_entity) {
-                const state = this.hass.states[this._config.timer_entity].state;
-                if (state && state !== 'unknown' && state !== '') {
-                    this._cancelTimer(); 
-                    this._executeTimerActions(fullTimerData);
-                }
+        if (state === 'active') {
+            const finishesAt = timerEntity.attributes.finishes_at;
+            const endMs = finishesAt ? Date.parse(finishesAt) : null;
+            let remainingSeconds;
+            if (endMs && !isNaN(endMs)) {
+                remainingSeconds = Math.max(0, Math.ceil((endMs - Date.now()) / 1000));
             } else {
-                this._localTimerEnd = null;
-                this._localTimerDuration = null;
-                this._executeTimerActions(fullTimerData);
+                remainingSeconds = _parseHADurationToSeconds(timerEntity.attributes.remaining) || 0;
+            }
+
+            this._timerRemaining = remainingSeconds > 0 ? _formatClockFromSeconds(remainingSeconds) : '';
+            if (durationSeconds && durationSeconds > 0) {
+                this._timerPercent = Math.min(100, Math.max(0, (remainingSeconds / durationSeconds) * 100));
+            } else {
+                this._timerPercent = remainingSeconds > 0 ? 100 : 0;
             }
             return;
         }
 
-        const totalDuration = duration || 60000;
-        this._timerPercent = (remaining / totalDuration) * 100;
+        if (state === 'paused') {
+            const remainingSeconds = _parseHADurationToSeconds(timerEntity.attributes.remaining) || 0;
+            this._timerRemaining = remainingSeconds > 0 ? _formatClockFromSeconds(remainingSeconds) : '';
+            if (durationSeconds && durationSeconds > 0) {
+                this._timerPercent = Math.min(100, Math.max(0, (remainingSeconds / durationSeconds) * 100));
+            } else {
+                this._timerPercent = remainingSeconds > 0 ? 100 : 0;
+            }
+            return;
+        }
 
-        const minutes = Math.floor(remaining / 60000);
-        const seconds = Math.floor((remaining % 60000) / 1000);
-        this._timerRemaining = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        this._timerRemaining = '';
+        this._timerPercent = 0;
     }
 
     render() {
@@ -407,7 +398,7 @@ class HatchCard extends LitElement {
                 case 'volume_presets': return this._config.volume_presets && this._config.volume_presets.length > 0;
                 case 'sound': return this._config.show_sound_control && mediaState.attributes.sound_mode_list && mediaState.attributes.sound_mode_list.length > 0;
                 case 'scenes': return this._config.show_scenes;
-                case 'timer': return this._config.show_timer;
+                case 'timer': return this._config.show_timer && !!this._config.timer_entity && this._config.timer_entity.startsWith('timer.');
                 case 'toddler_lock': return this._config.show_toddler_lock;
                 default: return false;
             }
@@ -415,12 +406,12 @@ class HatchCard extends LitElement {
 
         const showExpandButton = this._config.show_expand_button && hasExpandableControls;
         const showExpandedControls = showExpandButton ? this._showControls : hasExpandableControls;
-        const verticalExpandedClass = (this._config.layout === 'vertical' && showExpandButton) ? 'has-expand-button' : '';
+        const hasExpandButtonClass = showExpandButton ? 'has-expand-button' : '';
 
         return html`
             <ha-card 
                 style="${cardStyle}" 
-                class="${layoutClass} ${expandedClass} ${verticalExpandedClass}"
+                class="${layoutClass} ${expandedClass} ${hasExpandButtonClass}"
                 @click="${this._handleCardClick}"
             >
                 ${this._config.layout === 'horizontal' 
@@ -435,14 +426,18 @@ class HatchCard extends LitElement {
     _renderHorizontalLayout(isOn, lightColor, secondaryInfo, activeIcon, volumePercent, name, showExpandButton) {
         return html`
             <div class="content-wrapper">
-                <div class="header" 
-                    @mousedown="${this._handleMouseDown}"
-                    @mouseup="${this._handleMouseUp}"
-                    @touchstart="${this._handleTouchStart}"
-                    @touchend="${this._handleTouchEnd}"
-                    @touchcancel="${this._handleTouchCancel}"
-                >
-                    <div class="icon-container">
+                <div class="header">
+                    <div class="icon-container"
+                        @mousedown="${this._handleMouseDown}"
+                        @mouseup="${this._handleMouseUp}"
+                        @touchstart="${this._handleTouchStart}"
+                        @touchend="${this._handleTouchEnd}"
+                        @touchcancel="${this._handleTouchCancel}"
+                        @click="${(e) => e.stopPropagation()}"
+                        role="button"
+                        tabindex="0"
+                        aria-label="Toggle"
+                    >
                         ${this._renderIconOrPhoto(isOn, lightColor, activeIcon)}
                     </div>
                     <div class="info">
@@ -528,7 +523,7 @@ class HatchCard extends LitElement {
                 render: () => this._renderScenesControl(lightColor, hasLight),
             },
             timer: {
-                is_visible: () => this._config.show_timer,
+                is_visible: () => this._config.show_timer && !!this._config.timer_entity && this._config.timer_entity.startsWith('timer.'),
                 render: () => this._renderTimerControl(lightColor),
             },
             toddler_lock: {
@@ -591,7 +586,7 @@ class HatchCard extends LitElement {
         const shapeStyle = `background-color: ${shapeBg}`;
         const iconStyle = `color: ${isOn ? lightColorStyle : 'var(--primary-text-color, var(--paper-item-icon-color))'}`;
 
-        const size = isVertical ? 48 : 42;
+        const size = isVertical ? 48 : 36;
         const strokeWidth = 3;
         const svgSize = size + strokeWidth * 2;
         const center = svgSize / 2;
@@ -675,6 +670,7 @@ class HatchCard extends LitElement {
         if (!soundListFromAttr || !Array.isArray(soundListFromAttr)) {
             return this._renderWarning("'sound_mode_list' attribute not available.");
         }
+
         const selectedOption = mediaState.attributes.sound_mode || 'NONE';
 
         const fullSoundList = [...soundListFromAttr];
@@ -682,15 +678,23 @@ class HatchCard extends LitElement {
             fullSoundList.unshift(selectedOption);
         }
 
+        const items = fullSoundList.map((option) => ({
+            label: option === 'NONE' ? 'No Sound' : option,
+            value: option,
+        }));
+
+        const stop = (e) => e.stopPropagation();
+
         return html`
-            <ha-select
-                label="Sound"
-                .value="${selectedOption}"
-                @selected="${this._handleSoundChange}"
-                style="flex: 1;"
+            <select
+                class="sound-select"
+                @change="${this._handleSoundChange}"
+                @mousedown="${stop}"
+                @click="${stop}"
+                @touchstart="${stop}"
             >
-                ${fullSoundList.map(option => html`<mwc-list-item .value="${option}">${option === 'NONE' ? 'No Sound' : option}</mwc-list-item>`)}
-            </ha-select>
+                ${items.map((it) => html`<option value="${it.value}" ?selected="${it.value === selectedOption}">${it.label}</option>`)}
+            </select>
         `;
     }
 
@@ -805,15 +809,21 @@ class HatchCard extends LitElement {
             </div>
         `;
     }
-
     _renderTimerControl(lightColor) {
+        const timerEntityId = this._config.timer_entity;
+        const hasTimerEntity = !!timerEntityId && timerEntityId.startsWith('timer.');
         const hasActiveTimer = !!this._timerRemaining;
+
+        if (!hasTimerEntity) {
+            return html``;
+        }
+
         return html`
             <div class="control-row">
                 <ha-icon icon="mdi:timer-outline"></ha-icon>
                 <div class="timer-buttons">
                     ${this._getTimerPresets().map(preset => html`
-                        <button 
+                        <button
                             class="timer-button"
                             @click="${() => this._setTimer(preset.value)}"
                             style="--button-color: ${lightColor}"
@@ -822,7 +832,7 @@ class HatchCard extends LitElement {
                         </button>
                     `)}
                     ${hasActiveTimer ? html`
-                        <button 
+                        <button
                             class="timer-button cancel"
                             @click="${() => this._cancelTimer()}"
                         >
@@ -837,9 +847,7 @@ class HatchCard extends LitElement {
     _renderScenesControl(lightColor, hasLight) {
         return html`
             <div class="control-row scenes">
-                ${this._config.layout === 'horizontal' ? html`
                     <ha-icon icon="mdi:palette"></ha-icon>
-                ` : ''}
                 <div class="scene-buttons ${this._config.layout === 'vertical' ? 'vertical' : ''}" 
                     style="--scenes-per-row: ${this._config.scenes_per_row || 4}">
                     ${this._config.scenes.map(scene => {
@@ -1011,28 +1019,38 @@ class HatchCard extends LitElement {
 
     _handleStart(e) {
         this._clearHoldTimer();
+        this._holdFired = false;
         this._holdTimer = setTimeout(() => {
+            this._holdFired = true;
+            this._holdTimer = null;
             this._handleAction(this._config.hold_action);
         }, 500);
     }
 
     _handleEnd(e) {
         e.stopPropagation();
+
+        const hadHoldTimer = !!this._holdTimer;
         this._clearHoldTimer();
 
-        if (this._holdTimer) {
-            this._tapCount++;
+        if (this._holdFired) {
+            this._holdFired = false;
+            return;
+        }
 
-            if (this._tapCount === 1) {
-                this._tapTimer = setTimeout(() => {
-                    this._handleAction(this._config.tap_action);
-                    this._tapCount = 0;
-                }, 250);
-            } else if (this._tapCount === 2) {
-                clearTimeout(this._tapTimer);
-                this._handleAction(this._config.double_tap_action);
+        if (!hadHoldTimer) return;
+
+        this._tapCount++;
+
+        if (this._tapCount === 1) {
+            this._tapTimer = setTimeout(() => {
+                this._handleAction(this._config.tap_action);
                 this._tapCount = 0;
-            }
+            }, 250);
+        } else if (this._tapCount === 2) {
+            clearTimeout(this._tapTimer);
+            this._handleAction(this._config.double_tap_action);
+            this._tapCount = 0;
         }
     }
 
@@ -1042,18 +1060,41 @@ class HatchCard extends LitElement {
             this._holdTimer = null;
         }
     }
-
-    _toggleDevice(e) {
+    async _toggleDevice(e) {
         if (e) e.stopPropagation();
-        if (this._config.light_entity) {
-            this.hass.callService("light", "toggle", {
-                entity_id: this._config.light_entity,
-            });
-        } else {
-            this.hass.callService("media_player", "media_play_pause", {
-                entity_id: this._config.media_player_entity,
-            });
+
+        const entityId = this._config.media_player_entity;
+        if (!this.hass || !entityId) return;
+
+        const stateObj = this.hass.states[entityId];
+        const state = stateObj ? stateObj.state : null;
+        const isPlaying = state === 'playing';
+
+        const tryCall = async (service) => {
+            try {
+                await this.hass.callService('media_player', service, { entity_id: entityId });
+                return true;
+            } catch (err) {
+                return false;
+            }
+        };
+
+        if (isPlaying) {
+            if (await tryCall('media_stop')) return;
+            if (await tryCall('media_pause')) return;
+            if (await tryCall('turn_off')) return;
+            await tryCall('toggle');
+            return;
         }
+
+        if (state === 'off') {
+            await tryCall('turn_on');
+        }
+
+        if (await tryCall('media_play')) return;
+        if (await tryCall('media_play_pause')) return;
+        if (await tryCall('toggle')) return;
+        await tryCall('turn_on');
     }
 
     _showMoreInfo() {
@@ -1109,7 +1150,7 @@ class HatchCard extends LitElement {
     }
 
     _handleSoundChange(e) {
-        const newSound = e.target.value;
+        const newSound = (e.detail && e.detail.value !== undefined) ? e.detail.value : e.target.value;
         const mediaState = this.hass.states[this._config.media_player_entity];
         if (newSound && newSound !== mediaState.attributes.sound_mode) {
             this._vibrate();
@@ -1135,47 +1176,36 @@ class HatchCard extends LitElement {
             brightness: brightness,
         });
     }
+    _formatDurationForService(totalSeconds) {
+        const s = Math.max(0, Math.floor(totalSeconds));
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const ss = s % 60;
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${pad(h)}:${pad(m)}:${pad(ss)}`;
+    }
 
     _setTimer(minutes) {
         this._vibrate();
-        const durationInMillis = minutes * 60000;
-        const endTime = Date.now() + durationInMillis;
 
-        this._localTimerEnd = endTime;
-        this._localTimerDuration = durationInMillis;
-        this._timerRemaining = `${minutes}:00`;
-        this._timerPercent = 100;
-        this.requestUpdate();
-
-        if (this._config.timer_entity) {
-            const newActions = {};
-            if (this._config.timer_action_turn_off_light === false) newActions.tol = false;
-            if (this._config.timer_action_turn_off_media === true) newActions.tom = true;
-            if (this._config.timer_action_light_color) newActions.lc = this._config.timer_action_light_color;
-            if (this._config.timer_action_light_brightness !== null) newActions.lb = this._config.timer_action_light_brightness;
-            if (this._config.timer_action_sound_mode) newActions.sm = this._config.timer_action_sound_mode;
-            if (this._config.timer_action_volume !== null) newActions.v = this._config.timer_action_volume;
-
-            const timerPayload = {
-                timer: {
-                    e: endTime,
-                    d: durationInMillis, 
-                },
-                actions: newActions
-            };
-
-            const timerData = JSON.stringify(timerPayload);
-            
-            this.hass.callService("input_text", "set_value", {
-                entity_id: this._config.timer_entity,
-                value: timerData
-            });
+        const timerEntityId = this._config.timer_entity;
+        if (!timerEntityId || !timerEntityId.startsWith('timer.')) {
+            this._toast?.('Select a timer entity in the card configuration to enable presets.');
+            return;
         }
 
-        if (this.hass.services.hatch?.set_timer) {
-            this.hass.callService("hatch", "set_timer", {
+        const totalSeconds = minutes * 60;
+        const serviceDuration = this._formatDurationForService(totalSeconds);
+
+        this.hass.callService('timer', 'start', {
+            entity_id: timerEntityId,
+            duration: serviceDuration
+        });
+
+        if (this._config.sync_hatch_timer !== false && this.hass.services.hatch?.set_timer) {
+            this.hass.callService('hatch', 'set_timer', {
                 entity_id: this._config.media_player_entity,
-                duration: minutes,
+                duration: minutes
             });
         }
     }
@@ -1183,33 +1213,13 @@ class HatchCard extends LitElement {
     _cancelTimer() {
         this._vibrate();
 
-        this._localTimerEnd = null;
-        this._localTimerDuration = null;
-        this.requestUpdate();
-
-        if (this._config.timer_entity) {
-            try {
-                const state = this.hass.states[this._config.timer_entity].state;
-                if (state && state !== 'unknown' && state !== '') {
-                    const data = JSON.parse(state);
-                    delete data.timer;
-                    this.hass.callService("input_text", "set_value", {
-                        entity_id: this._config.timer_entity,
-                        value: JSON.stringify(data)
-                    });
-                }
-            } catch (e) {
-                this.hass.callService("input_text", "set_value", {
-                    entity_id: this._config.timer_entity,
-                    value: ""
-                });
-            }
+        const timerEntityId = this._config.timer_entity;
+        if (timerEntityId && timerEntityId.startsWith('timer.')) {
+            this.hass.callService('timer', 'cancel', { entity_id: timerEntityId });
         }
 
-        if (this.hass.services.hatch?.cancel_timer) {
-            this.hass.callService("hatch", "cancel_timer", {
-                entity_id: this._config.media_player_entity,
-            });
+        if (this._config.sync_hatch_timer !== false && this.hass.services.hatch?.cancel_timer) {
+            this.hass.callService('hatch', 'cancel_timer', { entity_id: this._config.media_player_entity });
         }
     }
 
@@ -1267,60 +1277,6 @@ class HatchCard extends LitElement {
         }
     }
 
-    _executeTimerActions(timerData) {
-        if (!this.hass) return;
-
-        const rawActions = timerData?.a || timerData?.actions || {}; 
-        const actions = {
-            turn_off_light: rawActions.tol ?? (rawActions.turn_off_light ?? true),
-            turn_off_media: rawActions.tom ?? (rawActions.turn_off_media ?? false),
-            light_color: rawActions.lc ?? (rawActions.light_color ?? null),
-            light_brightness: rawActions.lb ?? (rawActions.light_brightness ?? null),
-            sound_mode: rawActions.sm ?? (rawActions.sound_mode ?? null),
-            volume: rawActions.v ?? (rawActions.volume ?? null),
-        };
-
-        const hasLight = !!this._config.light_entity;
-        const willStopMedia = actions.turn_off_media;
-        const hasLightChanges = actions.light_color || actions.light_brightness !== null;
-
-        if (hasLight && actions.turn_off_light) {
-            this.hass.callService("light", "turn_off", { entity_id: this._config.light_entity });
-        }
-
-        if (willStopMedia) {
-            this.hass.callService("media_player", "media_stop", { entity_id: this._config.media_player_entity });
-            this.hass.callService("media_player", "volume_set", { entity_id: this._config.media_player_entity, volume_level: 0 });
-        } else if (actions.sound_mode) {
-            this.hass.callService("media_player", "select_sound_mode", { entity_id: this._config.media_player_entity, sound_mode: actions.sound_mode });
-        }
-
-        if (!willStopMedia && actions.volume !== null && actions.volume !== '') {
-            const volume = parseFloat(actions.volume) / 100;
-            this.hass.callService("media_player", "volume_set", { entity_id: this._config.media_player_entity, volume_level: Math.max(0, Math.min(1, volume)) });
-        }
-
-        if (hasLight && !actions.turn_off_light && hasLightChanges) {
-            const executeLight = () => {
-                const lightData = {};
-                let hasChanges = false;
-                if (actions.light_brightness !== null) {
-                    lightData.brightness_pct = parseInt(actions.light_brightness);
-                    hasChanges = true;
-                }
-                if (actions.light_color && Array.isArray(actions.light_color)) {
-                    lightData.rgb_color = actions.light_color;
-                    hasChanges = true;
-                }
-                if (hasChanges) {
-                    this.hass.callService("light", "turn_on", { entity_id: this._config.light_entity, ...lightData });
-                }
-            };
-            if (willStopMedia) setTimeout(executeLight, 1000);
-            else executeLight();
-        }
-    }
-
     _vibrate() {
         if (this._config.haptic && navigator.vibrate) {
             navigator.vibrate(50);
@@ -1330,39 +1286,36 @@ class HatchCard extends LitElement {
     static get styles() {
         return css`
             :host {
-                display: flex;
-                flex-direction: column;
-                height: 100%;
+                display: block;
             }
             ha-card {
                 position: relative;
                 transition: all var(--animation-duration, 250ms) ease-in-out;
                 display: flex;
                 flex-direction: column;
-                justify-content: space-between;
-                height: 100%;
                 box-sizing: border-box;
-                overflow: hidden;
-                cursor: pointer;
+                overflow: visible;
             }
-            .horizontal-layout { padding: 12px; }
+            .horizontal-layout { padding: 0 8px; min-height: 56px; }
             .horizontal-layout.expanded { height: auto; }
             .content-wrapper {
                 position: relative;
                 z-index: 1;
                 display: flex;
+                overflow: visible;
                 align-items: center;
                 justify-content: space-between;
                 width: 100%;
                 gap: 12px;
+                min-height: 56px;
             }
             .header {
                 display: flex;
                 align-items: center;
                 gap: 12px;
                 flex-grow: 1;
-                cursor: pointer;
                 -webkit-tap-highlight-color: transparent;
+                min-height: 56px;
             }
             .actions {
                 display: flex;
@@ -1371,12 +1324,12 @@ class HatchCard extends LitElement {
                 flex-shrink: 0;
             }
             .vertical-layout {
-                height: 120px;
+                min-height: 120px;
                 padding: 0;
                 position: relative;
             }
             .vertical-layout.expanded { height: auto; }
-            .vertical-layout.has-expand-button { min-height: 160px; }
+            .vertical-layout.has-expand-button { min-height: 120px; }
             .vertical-layout:has(.expanded-controls.always-visible) { height: auto; }
             .content-wrapper.vertical {
                 height: 100%;
@@ -1384,10 +1337,10 @@ class HatchCard extends LitElement {
                 display: block;
                 min-height: 120px;
             }
-            .vertical-layout.has-expand-button .content-wrapper.vertical { min-height: 160px; }
+            .vertical-layout.has-expand-button .content-wrapper.vertical { min-height: 120px; }
             .vertical-top-block {
                 position: absolute;
-                top: 18px;
+                top: 12px;
                 left: 16px;
                 right: 16px;
                 display: flex;
@@ -1401,7 +1354,7 @@ class HatchCard extends LitElement {
             }
             .info.vertical {
                 position: absolute;
-                bottom: 12px;
+                bottom: 10px;
                 left: 16px;
                 right: 16px;
                 height: 40px;
@@ -1410,20 +1363,21 @@ class HatchCard extends LitElement {
                 justify-content: center;
                 text-align: center;
             }
-            .vertical-layout.has-expand-button .info.vertical { bottom: 52px; }
+            /* Vertical expand button is absolutely positioned; keep title/subtitle centered. */
             .expand-button.vertical {
                 position: absolute;
-                bottom: 8px;
-                left: 50%;
-                transform: translateX(-50%);
+                bottom: 12px;
+                right: 12px;
+                left: auto;
+                transform: none;
                 margin-left: 0;
             }
             .icon-container {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                height: 42px;
-                width: 42px;
+                height: 36px;
+                width: 36px;
                 flex-shrink: 0;
                 cursor: pointer;
                 -webkit-tap-highlight-color: transparent;
@@ -1434,17 +1388,17 @@ class HatchCard extends LitElement {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                height: 42px;
-                width: 42px;
+                height: 36px;
+                width: 36px;
                 border-radius: 50%;
                 transition: background-color var(--animation-duration, 250ms);
             }
             .shape.vertical { width: 48px; height: 48px; }
             .shape.vertical ha-icon { --mdc-icon-size: 28px; }
-            .shape ha-icon { transition: color var(--animation-duration, 250ms); }
+            .shape ha-icon { transition: color var(--animation-duration, 250ms); --mdc-icon-size: 22px; }
             .user-photo {
-                height: 42px;
-                width: 42px;
+                height: 36px;
+                width: 36px;
                 border-radius: 50%;
                 object-fit: cover;
             }
@@ -1508,33 +1462,48 @@ class HatchCard extends LitElement {
             }
             .expand-button:hover { color: var(--primary-text-color); }
             .expanded-controls {
-                margin-top: 16px;
-                padding-top: 16px;
+                margin-top: 8px;
+                padding: 8px 8px 8px;
                 border-top: 1px solid var(--divider-color);
                 display: flex;
                 flex-direction: column;
-                gap: 12px;
+                gap: 8px;
                 animation: slideDown var(--animation-duration, 250ms) ease-out;
                 position: relative;
                 z-index: 1;
+                overflow: visible;
+            }
+            /*
+             * When the card uses an explicit expand/collapse control, keep the expanded area
+             * aligned to the 56px row grid: remove the extra top margin and divider line.
+             */
+            .horizontal-layout.has-expand-button .expanded-controls {
+                margin-top: 0;
+                border-top: none;
+            }
+            .vertical-layout.has-expand-button .expanded-controls {
+                margin-top: 0;
+                border-top: none;
             }
             .vertical-layout .expanded-controls {
-                margin: 16px;
-                margin-top: 16px;
+                margin-top: 12px;
                 position: relative;
                 z-index: 1;
+                overflow: visible;
             }
             .expanded-controls.always-visible {
                 animation: none;
                 border-top: none;
-                margin-top: 12px;
+                margin-top: 0;
                 padding-top: 0;
+                padding-bottom: 0;
             }
             .vertical-layout .expanded-controls.always-visible {
                 margin: 12px;
-                margin-top: 12px;
+                margin-top: 0;
                 position: relative;
                 z-index: 1;
+                overflow: visible;
             }
             @keyframes slideDown {
                 from { opacity: 0; transform: translateY(-10px); }
@@ -1544,6 +1513,7 @@ class HatchCard extends LitElement {
                 display: flex;
                 align-items: center;
                 gap: 12px;
+                min-height: 56px;
             }
             .control-row ha-icon {
                 color: var(--secondary-text-color);
@@ -1559,16 +1529,16 @@ class HatchCard extends LitElement {
             .slider-container {
                 position: relative;
                 flex: 1;
-                height: 42px;
+                height: 40px;
                 display: flex;
                 align-items: center;
             }
             .slider-track {
                 position: absolute;
                 width: 100%;
-                height: 42px;
+                height: 40px;
                 background-color: rgba(var(--rgb-primary-text-color), 0.05);
-                border-radius: 21px;
+                border-radius: 9999px;
                 overflow: hidden;
             }
             .slider-fill {
@@ -1582,7 +1552,7 @@ class HatchCard extends LitElement {
             .slider-input {
                 position: relative;
                 width: 100%;
-                height: 42px;
+                height: 40px;
                 -webkit-appearance: none;
                 appearance: none;
                 background: transparent;
@@ -1635,7 +1605,31 @@ class HatchCard extends LitElement {
                 padding: 16px;
                 border-radius: var(--ha-card-border-radius, 12px);
             }
-            .warning-msg { background-color: var(--warning-color, #ffa600); }
+            
+            .sound-select {
+                width: 100%;
+                height: 40px;
+                border-radius: 10px;
+                border: 1px solid var(--divider-color);
+                background: var(--ha-card-background, var(--card-background-color));
+                color: var(--primary-text-color);
+                /* Use a custom chevron so the arrow placement is consistent across devices */
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+                padding: 0 44px 0 12px;
+                font-size: 14px;
+                outline: none;
+                background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'><path fill='rgb(160,160,160)' d='M7 10l5 5 5-5z'/></svg>");
+                background-repeat: no-repeat;
+                background-position: right 14px center;
+                background-size: 16px 16px;
+            }
+            .sound-select::-ms-expand { display: none; }
+            .sound-select:focus {
+                border-color: var(--primary-color);
+            }
+.warning-msg { background-color: var(--warning-color, #ffa600); }
             @media (prefers-reduced-motion: reduce) {
                 * {
                     animation-duration: 0.01ms !important;
@@ -1813,11 +1807,6 @@ class HatchCardEditor extends LitElement {
             } else if (key === 'timer_presets') {
                 value = target.value.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v) && v > 0);
                 if (value.length === 0) value = [15, 30, 60, 120];
-            } else if (key === 'timer_action_light_color') {
-                value = parseColorInput(target.value);
-            } else if (key.startsWith('timer_action_') && (key.endsWith('_brightness') || key.endsWith('_volume'))) {
-                const numValue = parseInt(target.value);
-                value = (target.value.trim() === '' || isNaN(numValue)) ? null : (numValue >= 0 && numValue <= 100 ? numValue : null);
             } else if (key === 'scenes_per_row') {
                 const numValue = parseInt(target.value);
                 value = (!isNaN(numValue) && numValue >= 1 && numValue <= 8) ? numValue : 4;
@@ -1845,8 +1834,6 @@ class HatchCardEditor extends LitElement {
                 volume_step: 0.01,
                 secondary_info: 'Volume {volume}%',
                 timer_presets: [15, 30, 60, 120],
-                timer_action_turn_off_light: true,
-                timer_action_turn_off_media: false,
                 scenes_per_row: 4,
                 show_toddler_lock: false,
                 show_clock_brightness: false,
@@ -1861,7 +1848,6 @@ class HatchCardEditor extends LitElement {
                 'show_volume_buttons',
                 'haptic',
                 'volume_click_control',
-                'timer_action_turn_off_light',
                 'show_battery_percentage'
             ];
             
@@ -1950,32 +1936,9 @@ class HatchCardEditor extends LitElement {
         const currentMediaPlayer = this._config?.media_player_entity;
         const baseSoundModes = currentMediaPlayer && this.hass.states[currentMediaPlayer] 
             ? this.hass.states[currentMediaPlayer].attributes.sound_mode_list || [] : [];
-            
-        const timerSoundModes = [...baseSoundModes];
-        const selectedTimerSound = this._config?.timer_action_sound_mode;
-        if (selectedTimerSound && !timerSoundModes.includes(selectedTimerSound)) {
-            timerSoundModes.unshift(selectedTimerSound);
-        }
 
-        let displayConfig = { ...this._config };
-        if (this._config.timer_entity && this.hass.states[this._config.timer_entity]) {
-            try {
-                const state = this.hass.states[this._config.timer_entity].state;
-                if (state && state !== 'unknown' && state !== '') {
-                    const helperState = JSON.parse(state);
-                    const rawActions = helperState.a || helperState.actions;
-                    if (rawActions) {
-                        displayConfig.timer_action_turn_off_light = rawActions.tol ?? (rawActions.turn_off_light ?? true);
-                        displayConfig.timer_action_turn_off_media = rawActions.tom ?? (rawActions.turn_off_media ?? false);
-                        displayConfig.timer_action_light_color = rawActions.lc ?? (rawActions.light_color ?? null);
-                        displayConfig.timer_action_light_brightness = rawActions.lb ?? (rawActions.light_brightness ?? null);
-                        displayConfig.timer_action_sound_mode = rawActions.sm ?? (rawActions.sound_mode ?? null);
-                        displayConfig.timer_action_volume = rawActions.v ?? (rawActions.volume ?? null);
-                    }
-                }
-            } catch (e) {
-            }
-        }
+        const displayConfig = { ...this._config };
+
 
         const basicSchema = [
             {
@@ -2066,10 +2029,10 @@ class HatchCardEditor extends LitElement {
         const timerSchema = [
             {
                 name: "timer_entity",
-                label: "Timer Entity (Optional)",
-                selector: { 
-                    entity: { 
-                        domain: "input_text" 
+                label: "Timer Entity",
+                selector: {
+                    entity: {
+                        domain: "timer" 
                     } 
                 }
             }
@@ -2215,22 +2178,6 @@ class HatchCardEditor extends LitElement {
                                 ></ha-form>
                             ` : ''}
                             <ha-textfield id="timer_presets" label="Timer Presets (minutes)" .value="${displayConfig.timer_presets ? displayConfig.timer_presets.join(', ') : '15, 30, 60, 120'}" @input="${this._valueChanged}" helper="Comma-separated values in minutes"></ha-textfield>
-                            <div class="subsection-title">Timer Expiration Actions</div>
-                            ${hasLight ? html`
-                                <label class="switch-wrapper"><ha-switch id="timer_action_turn_off_light" .checked="${displayConfig.timer_action_turn_off_light !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Turn Off Light</span></div></label>
-                            ` : ''}
-                            <label class="switch-wrapper"><ha-switch id="timer_action_turn_off_media" .checked="${displayConfig.timer_action_turn_off_media === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Turn Off Media</span></div></label>
-                            ${hasLight ? html`
-                                <ha-textfield id="timer_action_light_brightness" label="Timer Light Brightness (%)" type="number" min="1" max="100" .value="${displayConfig.timer_action_light_brightness ?? ''}" @input="${this._valueChanged}"></ha-textfield>
-                                <ha-textfield id="timer_action_light_color" label="Timer Light Color" .value="${displayConfig.timer_action_light_color ? getColorNameFromRgb(displayConfig.timer_action_light_color) : ''}" @input="${this._valueChanged}" helper="Color name or RGB (255,255,255)"></ha-textfield>
-                            ` : ''}
-                            ${baseSoundModes.length > 0 ? html`
-                                <ha-select key="timer_action_sound_mode" label="Timer Sound Mode" .value="${displayConfig.timer_action_sound_mode || ''}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
-                                    <mwc-list-item value=""></mwc-list-item>
-                                    ${timerSoundModes.map(mode => html`<mwc-list-item .value="${mode}">${mode}</mwc-list-item>`)}
-                                </ha-select>
-                            ` : ''}
-                            <ha-textfield id="timer_action_volume" label="Timer Volume (%)" type="number" min="0" max="100" .value="${displayConfig.timer_action_volume ?? ''}" @input="${this._valueChanged}"></ha-textfield>
                         </div>
                     ` : ''}
                 </div>

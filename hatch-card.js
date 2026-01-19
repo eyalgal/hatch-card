@@ -5,7 +5,7 @@
  *
  * Author: eyalgal
  * License: MIT
- * Version: 1.3.0
+ * Version: 1.3.1
  */
 import {
     LitElement,
@@ -13,7 +13,7 @@ import {
     css
 } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
 
-const cardVersion = "1.3.0";
+const cardVersion = "1.3.1";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {
@@ -51,7 +51,6 @@ function formatTimerDuration(minutes) {
     }
 }
 
-
 function _parseHADurationToSeconds(str) {
     if (!str || typeof str !== 'string') return null;
     const m = str.trim().match(/^(\d+):(\d{2}):(\d{2})$/);
@@ -72,7 +71,6 @@ function _formatClockFromSeconds(totalSeconds) {
     if (h > 0) return `${h}:${pad(m)}:${pad(ss)}`;
     return `${m}:${pad(ss)}`;
 }
-
 
 const COLOR_NAMES = {
     'red': [255, 0, 0],
@@ -102,25 +100,17 @@ const COLOR_NAMES = {
 
 function getColorNameFromRgb(rgbArray) {
     if (!rgbArray || !Array.isArray(rgbArray)) return '';
-
     const rgbString = rgbArray.join(',');
     for (const [name, rgb] of Object.entries(COLOR_NAMES)) {
-        if (rgb.join(',') === rgbString) {
-            return name;
-        }
+        if (rgb.join(',') === rgbString) return name;
     }
     return rgbArray.join(', ');
 }
 
 function parseColorInput(input) {
     if (!input || !input.trim()) return null;
-
     const trimmed = input.trim().toLowerCase();
-
-    if (COLOR_NAMES[trimmed]) {
-        return COLOR_NAMES[trimmed];
-    }
-
+    if (COLOR_NAMES[trimmed]) return COLOR_NAMES[trimmed];
     const rgbMatch = trimmed.match(/^\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*$/);
     if (rgbMatch) {
         const r = parseInt(rgbMatch[1]);
@@ -130,23 +120,18 @@ function parseColorInput(input) {
             return [r, g, b];
         }
     }
-
     return null;
 }
 
-
 class HatchCard extends LitElement {
-
     static get properties() {
         return {
             hass: {},
             _config: {},
             _timerRemaining: { type: String },
             _timerPercent: { type: Number },
-            _showControls: { type: Boolean },        };
-											 
-												  
-		  
+            _showControls: { type: Boolean },
+        };
     }
 
     constructor() {
@@ -160,8 +145,6 @@ class HatchCard extends LitElement {
         this._tapTimer = null;
         this._tapCount = 0;
         this._userProvidedIcon = null;
-								   
-										
     }
 
     setConfig(config) {
@@ -200,12 +183,6 @@ class HatchCard extends LitElement {
             double_tap_action: { action: "none" },
             volume_click_control: true,
             timer_presets: [15, 30, 60, 120],
-											  
-											   
-										   
-												
-										  
-									  
             scenes: [],
             scenes_per_row: 4,
             controls_order: [
@@ -267,45 +244,14 @@ class HatchCard extends LitElement {
     }
 
     _getTimerEntity() {
-																					   
-				 
         const id = this._config.timer_entity;
         if (!id) return null;
         return this.hass?.states?.[id] || null;
-											 
-												   
-														
-									
-					 
-				 
-						 
-																								   
-			 
-		 
-		
-				
-					
-										 
-												   
-			  
-					  
-																		 
-																		 
-																   
-																			 
-																 
-														 
-			 
-		  
     }
 
     _updateTimer() {
         const timerEntity = this._getTimerEntity();
         if (!timerEntity || !timerEntity.attributes) {
-											   
-													 
-
-					   
             this._timerRemaining = '';
             this._timerPercent = 0;
             return;
@@ -327,13 +273,8 @@ class HatchCard extends LitElement {
             this._timerRemaining = remainingSeconds > 0 ? _formatClockFromSeconds(remainingSeconds) : '';
             if (durationSeconds && durationSeconds > 0) {
                 this._timerPercent = Math.min(100, Math.max(0, (remainingSeconds / durationSeconds) * 100));
-										 
-															 
-				 
             } else {
                 this._timerPercent = remainingSeconds > 0 ? 100 : 0;
-												
-														 
             }
             return;
         }
@@ -350,7 +291,6 @@ class HatchCard extends LitElement {
         }
 
         this._timerRemaining = '';
-															   
         this._timerPercent = 0;
     }
 
@@ -360,12 +300,12 @@ class HatchCard extends LitElement {
         if (!this._config.media_player_entity) {
             return html`
                 <ha-card>
-					<div class="grid">				  
-						<div style="padding: 16px; text-align: center; color: var(--secondary-text-color);">
-                        <ha-icon icon="mdi:sleep" style="width: 40px; height: 40px; margin-bottom: 8px;"></ha-icon>
-                        <div style="font-weight: bold; margin-bottom: 4px;">Hatch Card</div>
-                        <div>Please configure a Media Player entity.</div>
-						</div>
+                    <div class="grid">                
+                        <div style="padding: 16px; text-align: center; color: var(--secondary-text-color);">
+                            <ha-icon icon="mdi:sleep" style="width: 40px; height: 40px; margin-bottom: 8px;"></ha-icon>
+                            <div style="font-weight: bold; margin-bottom: 4px;">Hatch Card</div>
+                            <div>Please configure a Media Player entity.</div>
+                        </div>
                     </div>
                 </ha-card>
             `;
@@ -428,7 +368,6 @@ class HatchCard extends LitElement {
             secondaryInfo = mediaState.attributes.media_artist || (this._config.secondary_info ? this._config.secondary_info.replace('{volume}', volumePercent).replace('{sound}', soundMode) : '');
         }
 
-
         const cardStyle = this._getCardBackgroundStyle(lightColorRgb, volumePercent, hasLight);
 
         if (this._timerRemaining && secondaryInfo) {
@@ -464,13 +403,13 @@ class HatchCard extends LitElement {
                 class="${layoutClass} ${expandedClass} ${hasExpandButtonClass}"
                 @click="${this._handleCardClick}"
             >
-				<div class="grid">				  
+                <div class="grid">                
                 ${this._config.layout === 'horizontal' 
                     ? this._renderHorizontalLayout(isOn, lightColor, secondaryInfo, activeIcon, volumePercent, name, showExpandButton)
                     : this._renderVerticalLayout(isOn, lightColor, secondaryInfo, activeIcon, volumePercent, name, showExpandButton)
                 }
                 ${showExpandedControls ? this._renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, hasLight) : ''}
-				</div>	  
+                </div>      
             </ha-card>
         `;
     }
@@ -548,7 +487,6 @@ class HatchCard extends LitElement {
 
     _renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, hasLight) {
         const showAlways = !this._config.show_expand_button;
-
         const controlsMap = {
             brightness: {
                 is_visible: () => hasLight && this._config.show_brightness_control && (isOn || this._config.show_brightness_when_off),
@@ -589,9 +527,7 @@ class HatchCard extends LitElement {
             .filter(control => control && control.is_visible())
             .map(control => control.render());
 
-        if (orderedControls.length === 0) {
-            return html``;
-        }
+        if (orderedControls.length === 0) return html``;
 
         return html`
             <div class="expanded-controls ${showAlways ? 'always-visible' : ''}">
@@ -609,12 +545,9 @@ class HatchCard extends LitElement {
         const color = `rgba(${rgb}, 0.1)`;
 
         switch (this._config.background_mode) {
-            case 'full':
-                return `background: ${color};`;
-            case 'volume':
-                return `background: linear-gradient(to right, ${color} ${volumePercent}%, ${defaultBg} ${volumePercent}%);`;
-            default:
-                return `background: ${defaultBg};`;
+            case 'full': return `background: ${color};`;
+            case 'volume': return `background: linear-gradient(to right, ${color} ${volumePercent}%, ${defaultBg} ${volumePercent}%);`;
+            default: return `background: ${defaultBg};`;
         }
     }
 
@@ -700,10 +633,8 @@ class HatchCard extends LitElement {
                 fg = lightColorStyle;
             } else {
                 bg = 'rgba(var(--rgb-primary-color), 0.15)';
-			 
-				
                 fg = lightColorStyle || 'var(--primary-color)';
-            }																										   
+            }
         }
 
         return html`
@@ -711,8 +642,6 @@ class HatchCard extends LitElement {
                 class="action-button icon-button"
                 style="--button-bg: ${bg}; --button-fg: ${fg};"
                 @click="${(e) => { e.stopPropagation(); this._handleVolumeChange(change); }}"
-							 
-							
                 aria-label="${change > 0 ? 'Increase' : 'Decrease'} volume"
             >
                 <ha-icon .icon="${icon}"></ha-icon>
@@ -727,7 +656,6 @@ class HatchCard extends LitElement {
         }
 
         const selectedOption = mediaState.attributes.sound_mode || 'NONE';
-
         const fullSoundList = [...soundListFromAttr];
         if (selectedOption && !fullSoundList.includes(selectedOption)) {
             fullSoundList.unshift(selectedOption);
@@ -743,7 +671,6 @@ class HatchCard extends LitElement {
         return html`
             <select
                 class="sound-select"
-										  
                 @change="${this._handleSoundChange}"
                 @mousedown="${stop}"
                 @click="${stop}"
@@ -755,24 +682,6 @@ class HatchCard extends LitElement {
     }
 
     _renderBrightnessControl(isOn, lightColor, brightness) {
-								  
-						
-										 
-															   
-							  
-												
-																	 
-							   
-								 
-								
-											  
-																 
-								 
-																							   
-					  
-			  
-		 
-
         return html`
             <div class="control-row">
                 <ha-icon icon="mdi:brightness-6"></ha-icon>
@@ -798,25 +707,6 @@ class HatchCard extends LitElement {
     }
 
     _renderVolumeSliderControl(volumeLevel, lightColor) {
-												  
-
-								  
-						
-										 
-															  
-							  
-												
-							   
-								 
-								
-									   
-																								
-								 
-															  
-					  
-			  
-		 
-
         return html`
             <div class="control-row">
                 <ha-icon icon="mdi:volume-high"></ha-icon>
@@ -850,24 +740,6 @@ class HatchCard extends LitElement {
         const brightness = clockEntity.attributes.brightness || 0;
         const max = 255;
         const warmWhite = COLOR_NAMES['warm white'].join(',');
-
-								  
-						
-										 
-																
-							  
-												
-																			  
-							   
-									
-								
-											  
-																	  
-								 
-																							   
-					  
-			  
-		 
 
         return html`
             <div class="control-row">
@@ -926,9 +798,7 @@ class HatchCard extends LitElement {
         const hasTimerEntity = !!timerEntityId && timerEntityId.startsWith('timer.');
         const hasActiveTimer = !!this._timerRemaining;
 
-        if (!hasTimerEntity) {
-            return html``;
-        }
+        if (!hasTimerEntity) return html``;
 
         return html`
             <div class="control-row">
@@ -959,7 +829,7 @@ class HatchCard extends LitElement {
     _renderScenesControl(lightColor, hasLight) {
         return html`
             <div class="control-row scenes">
-				<ha-icon icon="mdi:palette"></ha-icon>
+                <ha-icon icon="mdi:palette"></ha-icon>
                 <div class="scene-buttons ${this._config.layout === 'vertical' ? 'vertical' : ''}"
                     style="--scenes-per-row: ${this._config.scenes_per_row || 4}">
                     ${this._config.scenes.map(scene => {
@@ -969,7 +839,6 @@ class HatchCard extends LitElement {
 
                         const hasName = typeof scene.name === 'string' ? scene.name.trim().length > 0 : !!scene.name;
                         const hasIcon = typeof scene.icon === 'string' ? scene.icon.trim().length > 0 : !!scene.icon;
-                        const isFull = hasName && hasIcon;
                         const icon = hasIcon ? scene.icon : (!hasName ? 'mdi:palette' : null);
 
                         return html`
@@ -1030,18 +899,15 @@ class HatchCard extends LitElement {
 
         let icon;
         if (isCharging) {
-            if (level >= 95) {
-                icon = 'mdi:battery-charging-100';
-            } else {
+            if (level >= 95) icon = 'mdi:battery-charging-100';
+            else {
                 const roundedLevel = Math.round(level / 10) * 10;
                 icon = `mdi:battery-charging-${roundedLevel}`;
             }
         } else {
-            if (level <= 5) {
-                icon = 'mdi:battery-outline';
-            } else if (level <= 15) {
-                icon = 'mdi:battery-alert-variant-outline';
-            } else {
+            if (level <= 5) icon = 'mdi:battery-outline';
+            else if (level <= 15) icon = 'mdi:battery-alert-variant-outline';
+            else {
                 const roundedLevel = Math.round(level / 10) * 10;
                 icon = `mdi:battery-${roundedLevel}`;
             }
@@ -1069,9 +935,7 @@ class HatchCard extends LitElement {
 
     _handleAction(action) {
         if (!action || action.action === 'none') return;
-
         this._vibrate();
-
         switch (action.action) {
             case 'toggle': this._toggleDevice(); break;
             case 'more-info': this._showMoreInfo(); break;
@@ -1084,9 +948,7 @@ class HatchCard extends LitElement {
                 }
                 break;
             case 'url':
-                if (action.url_path) {
-                    window.open(action.url_path, action.new_tab !== false ? '_blank' : '_self');
-                }
+                if (action.url_path) window.open(action.url_path, action.new_tab !== false ? '_blank' : '_self');
                 break;
         }
     }
@@ -1096,30 +958,21 @@ class HatchCard extends LitElement {
         const serviceData = { ...(action.service_data || {}), ...(action.data || {}) };
         
         let entityId = null;
-
         if (action.target && action.target.entity_id) {
             entityId = action.target.entity_id;
         } else if (serviceData.entity_id) {
             entityId = serviceData.entity_id;
         }
 
-        if (entityId === 'light') {
-            entityId = this._config.light_entity;
-        } else if (entityId === 'media_player') {
-            entityId = this._config.media_player_entity;
-        }
+        if (entityId === 'light') entityId = this._config.light_entity;
+        else if (entityId === 'media_player') entityId = this._config.media_player_entity;
 
         if (!entityId) {
-            if (domain === 'light') {
-                entityId = this._config.light_entity;
-            } else if (domain === 'media_player') {
-                entityId = this._config.media_player_entity;
-            }
+            if (domain === 'light') entityId = this._config.light_entity;
+            else if (domain === 'media_player') entityId = this._config.media_player_entity;
         }
         
-        if (!entityId) {
-            entityId = this._config.light_entity || this._config.media_player_entity;
-        }
+        if (!entityId) entityId = this._config.light_entity || this._config.media_player_entity;
 
         if (entityId) {
             serviceData.entity_id = entityId;
@@ -1147,7 +1000,6 @@ class HatchCard extends LitElement {
 
     _handleEnd(e) {
         e.stopPropagation();
-
         const hadHoldTimer = !!this._holdTimer;
         this._clearHoldTimer();
 
@@ -1155,18 +1007,11 @@ class HatchCard extends LitElement {
             this._holdFired = false;
             return;
         }
-
         if (!hadHoldTimer) return;
-
         this._tapCount++;
 
         if (this._tapCount === 1) {
             this._tapTimer = setTimeout(() => {
-							 
-
-									   
-												   
-																
                 this._handleAction(this._config.tap_action);
                 this._tapCount = 0;
             }, 250);
@@ -1183,11 +1028,9 @@ class HatchCard extends LitElement {
             this._holdTimer = null;
         }
     }
+
     async _toggleDevice(e) {
         if (e) e.stopPropagation();
-
-	 
-	   
         const entityId = this._config.media_player_entity;
         if (!this.hass || !entityId) return;
 
@@ -1211,11 +1054,7 @@ class HatchCard extends LitElement {
             await tryCall('toggle');
             return;
         }
-
-        if (state === 'off') {
-            await tryCall('turn_on');
-        }
-
+        if (state === 'off') await tryCall('turn_on');
         if (await tryCall('media_play')) return;
         if (await tryCall('media_play_pause')) return;
         if (await tryCall('toggle')) return;
@@ -1224,10 +1063,7 @@ class HatchCard extends LitElement {
 
     _showMoreInfo() {
         const entityId = this._config.light_entity || this._config.media_player_entity;
-        const event = new Event("hass-more-info", {
-            bubbles: true,
-            composed: true,
-        });
+        const event = new Event("hass-more-info", { bubbles: true, composed: true });
         event.detail = { entityId };
         this.dispatchEvent(event);
     }
@@ -1301,6 +1137,7 @@ class HatchCard extends LitElement {
             brightness: brightness,
         });
     }
+
     _formatDurationForService(totalSeconds) {
         const s = Math.max(0, Math.floor(totalSeconds));
         const h = Math.floor(s / 3600);
@@ -1312,40 +1149,19 @@ class HatchCard extends LitElement {
 
     _setTimer(minutes) {
         this._vibrate();
-  
-
-
         const timerEntityId = this._config.timer_entity;
         if (!timerEntityId || !timerEntityId.startsWith('timer.')) {
-            this._toast?.('Select a timer entity in the card configuration to enable presets.');
             return;
         }
 
         const totalSeconds = minutes * 60;
         const serviceDuration = this._formatDurationForService(totalSeconds);
-							 
-
-										
-								  
-																						   
-																						 
 
         this.hass.callService('timer', 'start', {
             entity_id: timerEntityId,
             duration: serviceDuration
         });
-								  
-						
-							   
 
-				  
-								   
-			  
-
-														   
-			
-															  
-													 
         if (this._config.sync_hatch_timer !== false && this.hass.services.hatch?.set_timer) {
             this.hass.callService('hatch', 'set_timer', {
                 entity_id: this._config.media_player_entity,
@@ -1356,34 +1172,12 @@ class HatchCard extends LitElement {
 
     _cancelTimer() {
         this._vibrate();
-
-
-					
-						
-
-								   
-										
         const timerEntityId = this._config.timer_entity;
         if (timerEntityId && timerEntityId.startsWith('timer.')) {
             this.hass.callService('timer', 'cancel', { entity_id: timerEntityId });
-				 
-																				
-																   
-												   
-									  
-																	  
-															 
-												   
-					   
-				 
-						 
-																  
         }
-
         if (this._config.sync_hatch_timer !== false && this.hass.services.hatch?.cancel_timer) {
-			 
             this.hass.callService('hatch', 'cancel_timer', { entity_id: this._config.media_player_entity });
-
         }
     }
 
@@ -1441,60 +1235,6 @@ class HatchCard extends LitElement {
         }
     }
 
-			 
-		 
-	 
-
-									 
-							   
-
-																	 
-						 
-																				  
-																				   
-																		   
-																					 
-																		 
-																
-		  
-
-													 
-													 
-																						 
-
-												 
-																								 
-		 
-
-							
-																												 
-																																  
-										
-																																						
-		 
-
-																				 
-															
-																																								 
-		 
-
-																	 
-										
-									 
-									   
-														
-																				  
-									  
-				 
-																				
-															  
-									  
-				 
-								 
-																													  
-				 
-			  
-															  
     _vibrate() {
         if (this._config.haptic && navigator.vibrate) {
             navigator.vibrate(50);
@@ -1505,27 +1245,19 @@ class HatchCard extends LitElement {
         return css`
             :host {
                 display: block;
-						 
-				   
             }
             ha-card {
                 position: relative;
                 transition: all var(--animation-duration, 250ms) ease-in-out;
                 display: flex;
                 flex-direction: column;
-								   
-																			 
                 box-sizing: border-box;
                 border-radius: var(--ha-card-border-radius, 12px);
                 overflow: hidden;
                 padding: 0;
                 background: var(--ha-card-background, var(--card-background-color));
-								 
-																												 
             }
-            .grid { display: grid; grid-template-columns: 1fr; padding: 0; margin: -1px 0; }																						   
-																	  
-			 
+            .grid { display: grid; grid-template-columns: 1fr; padding: 0; margin: -1px 0; }
             .horizontal-layout { padding: 0 8px; min-height: 56px; }
             .horizontal-layout.expanded { height: auto; }
             .content-wrapper {
@@ -1544,7 +1276,6 @@ class HatchCard extends LitElement {
                 align-items: center;
                 gap: 12px;
                 flex-grow: 1;
-							  
                 -webkit-tap-highlight-color: transparent;
                 min-height: 56px;
             }
@@ -1555,10 +1286,6 @@ class HatchCard extends LitElement {
                 flex-shrink: 0;
             }
             .vertical-layout { padding: 0 8px; min-height: 120px; position: relative; }
-								  
-						   
-								   
-			 
             .vertical-layout.expanded { height: auto; }
             .vertical-layout.has-expand-button { min-height: 120px; }
             .vertical-layout:has(.expanded-controls.always-visible) { height: auto; }
@@ -1594,7 +1321,6 @@ class HatchCard extends LitElement {
                 justify-content: center;
                 text-align: center;
             }
-																								
             .expand-button.vertical {
                 position: absolute;
                 bottom: 12px;
@@ -1659,26 +1385,6 @@ class HatchCard extends LitElement {
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
-									
-								 
-										
-			 
-							
-							  
-									
-										
-								
-																 
-							
-							 
-								   
-			 
-														   
-															 
-							 
-								
-								 
-								
             .expand-button {
                 display: flex;
                 align-items: center;
@@ -1694,7 +1400,7 @@ class HatchCard extends LitElement {
             .expand-button:hover { color: var(--primary-text-color); }
             .expanded-controls {
                 margin-top: 8px;
-                padding: 0px 8px;
+                padding: 0;
                 border-top: 1px solid var(--divider-color);
                 display: flex;
                 flex-direction: column;
@@ -1705,32 +1411,33 @@ class HatchCard extends LitElement {
                 overflow: visible;
             }
             .horizontal-layout.has-expand-button .expanded-controls {
-                margin-top: 1px;
-				margin-bottom: 6px;
+                margin-top: 3px;
+                margin-bottom: 4px;
                 padding-top: 0;
             }
             .vertical-layout.has-expand-button .expanded-controls {
-				margin: 1px 8px 6px;
-				padding: 0;
-				border-top: 1;
+                margin-top: 3px;
+                margin-bottom: 4px;
+                padding: 0;
+                border-top: 1;
             }
             .vertical-layout .expanded-controls {
                 margin-top: 12px;
-	  
                 position: relative;
                 z-index: 1;
                 overflow: visible;
             }
             .expanded-controls.always-visible {
                 animation: none;
-                margin-top: 1px;
-				margin-bottom: 6px;
+                margin-top: 3px;
+                margin-bottom: 4px;
                 padding-top: 0;
                 padding-bottom: 0;
             }
             .vertical-layout .expanded-controls.always-visible {
-				margin: 1px 8px 6px;
-				padding: 0;
+                margin-top: 3px;
+                margin-bottom: 4px;
+                padding: 0;
                 position: relative;
                 z-index: 1;
                 overflow: visible;
@@ -1753,33 +1460,23 @@ class HatchCard extends LitElement {
             .control-value {
                 font-size: 0.875rem;
                 color: var(--secondary-text-color);
-                min-width: 40px;
+                min-width: 24px;
                 text-align: right;
             }
-							   
-						
-								   
-							 
-							 
-						  
-											
-			 
-												
-							 
-			 
             .slider-container {
                 position: relative;
                 flex: 1;
                 height: 40px;
                 display: flex;
                 align-items: center;
+                border-radius: var(--ha-card-border-radius, 12px);
             }
             .slider-track {
                 position: absolute;
                 width: 100%;
                 height: 40px;
                 background-color: rgba(var(--rgb-primary-text-color), 0.05);
-                border-radius: 9999px;
+                border-radius: inherit;
                 overflow: hidden;
             }
             .slider-fill {
@@ -1825,12 +1522,9 @@ class HatchCard extends LitElement {
                 background-color: var(--button-bg, rgba(var(--rgb-primary-text-color), 0.05));
                 color: var(--button-fg, var(--primary-text-color));
                 border: none;
-                border-radius: 8px;
+                border-radius: var(--ha-card-border-radius, 12px);
                 cursor: pointer;
-												 
                 font-size: 0.875rem;
-								
-		 
                 transition: background-color var(--animation-duration, 250ms), color var(--animation-duration, 250ms);
                 box-sizing: border-box;
             }
@@ -1840,7 +1534,6 @@ class HatchCard extends LitElement {
             .action-button.active {
                 background-color: var(--button-color, var(--primary-color));
                 color: white;
-																		
             }
             .action-button.danger {
                 background-color: var(--error-color);
@@ -1852,23 +1545,18 @@ class HatchCard extends LitElement {
                 padding: 0;
             }
             .action-button.icon-button ha-icon {
-                --mdc-icon-size: 20px;							 
-		 
-			 
+                --mdc-icon-size: 20px;
             }
-				  
-			 
             .error-msg, .warning-msg {
                 background-color: var(--error-color, #db4437);
                 color: white;
                 padding: 16px;
                 border-radius: var(--ha-card-border-radius, 12px);
             }
-            
             .sound-select {
                 width: 100%;
                 height: 40px;
-                border-radius: 10px;
+                border-radius: var(--ha-card-border-radius, 12px);
                 border: 1px solid var(--divider-color);
                 background: var(--ha-card-background, var(--card-background-color));
                 color: var(--primary-text-color);
@@ -1887,7 +1575,7 @@ class HatchCard extends LitElement {
             .sound-select:focus {
                 border-color: var(--primary-color);
             }
-.warning-msg { background-color: var(--warning-color, #ffa600); }
+            .warning-msg { background-color: var(--warning-color, #ffa600); }
             @media (prefers-reduced-motion: reduce) {
                 * {
                     animation-duration: 0.01ms !important;
@@ -1924,24 +1612,6 @@ class HatchCard extends LitElement {
             }
             .scene-button:hover { background-color: var(--scene-color, rgba(var(--rgb-primary-color), 0.1)); }
             .scene-button ha-icon { color: var(--primary-text-color); --mdc-icon-size: 24px; }
-            
-									   
-			 
-																											  
-																							  
-			
-			
-								   
-									
-										
-						  
-								
-							 
-								 
-			 
-										   
-									  
-			 
             .toggle-control {
                 justify-content: space-between;
             }
@@ -1959,10 +1629,10 @@ class HatchCard extends LitElement {
             }
             .toggle-switch {
                 position: relative;
-                width: 52px;
-                height: 32px;
+                width: 60px;
+                height: 40px;
                 background-color: rgba(var(--rgb-primary-text-color), 0.05);
-                border-radius: 8px;
+                border-radius: var(--ha-card-border-radius, 12px);
                 cursor: pointer;
                 transition: background-color 0.2s ease-in-out;
                 flex-shrink: 0;
@@ -1974,10 +1644,10 @@ class HatchCard extends LitElement {
                 position: relative;
                 top: 2px;
                 left: 2px;
-                width: 28px;
-                height: 28px;
+                width: 36px;
+                height: 36px;
                 background-color: var(--card-background-color, #FFF);
-                border-radius: 6px;
+                border-radius: var(--ha-card-border-radius, 12px);
                 display: grid;
                 place-items: center;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.2);
@@ -1985,7 +1655,7 @@ class HatchCard extends LitElement {
                 color: var(--secondary-text-color);
             }
             .toggle-thumb ha-icon {
-                --mdc-icon-size: 20px;
+                --mdc-icon-size: 26px;
                 position: absolute;
                 top: 50%;
                 left: 50%;
@@ -2082,11 +1752,6 @@ class HatchCardEditor extends LitElement {
             } else if (key === 'timer_presets') {
                 value = target.value.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v) && v > 0);
                 if (value.length === 0) value = [15, 30, 60, 120];
-																														  
-													 
-												 
-																											 
-																  
             } else if (key === 'scenes_per_row') {
                 const numValue = parseInt(target.value);
                 value = (!isNaN(numValue) && numValue >= 1 && numValue <= 8) ? numValue : 4;
@@ -2114,8 +1779,6 @@ class HatchCardEditor extends LitElement {
                 volume_step: 0.01,
                 secondary_info: 'Volume {volume}%',
                 timer_presets: [15, 30, 60, 120],
-										   
-										
                 scenes_per_row: 4,
                 show_toddler_lock: false,
                 show_clock_brightness: false,
@@ -2130,16 +1793,12 @@ class HatchCardEditor extends LitElement {
                 'show_volume_buttons',
                 'haptic',
                 'volume_click_control',
-
                 'show_battery_percentage'
             ];
             
             if (booleanFieldsWithTrueDefaults.includes(key)) {
-                if (value === true) {
-                    delete newConfig[key];
-                } else {
-                    newConfig[key] = value;
-                }
+                if (value === true) delete newConfig[key];
+                else newConfig[key] = value;
             } else if ((defaults[key] !== undefined && JSON.stringify(value) === JSON.stringify(defaults[key])) || value === null || value === '' || value === undefined) {
                 delete newConfig[key];
             } else {
@@ -2182,15 +1841,10 @@ class HatchCardEditor extends LitElement {
         let value;
         const target = e.target;
 
-        if (target.tagName === 'HA-SWITCH') {
-            value = target.checked;
-        } else if (target.tagName === 'HA-SELECT') {
-            value = e.detail?.value ?? target.value;
-        } else if (target.tagName === 'HA-ICON-PICKER') {
-            value = e.detail?.value || '';
-        } else {
-            value = target.value;
-        }
+        if (target.tagName === 'HA-SWITCH') value = target.checked;
+        else if (target.tagName === 'HA-SELECT') value = e.detail?.value ?? target.value;
+        else if (target.tagName === 'HA-ICON-PICKER') value = e.detail?.value || '';
+        else value = target.value;
         
         if (field === 'color') value = parseColorInput(value);
         else if (field === 'brightness' || field === 'volume' || field === 'transition') {
@@ -2220,32 +1874,6 @@ class HatchCardEditor extends LitElement {
         const baseSoundModes = currentMediaPlayer && this.hass.states[currentMediaPlayer] 
             ? this.hass.states[currentMediaPlayer].attributes.sound_mode_list || [] : [];
 
-        const displayConfig = { ...this._config };
-																	 
-																						  
-																						 
-			
-
-																		 
-																				  
-														
-		 
-
-												
-																					   
-				 
-																				
-																   
-														  
-																			
-									 
-																														  
-																														   
-																												   
-																															 
-																												 
-																										
-
         const basicSchema = [
             {
                 name: "name",
@@ -2255,80 +1883,45 @@ class HatchCardEditor extends LitElement {
             {
                 name: "media_player_entity",
                 label: "Media Player Entity (Required)",
-                selector: { 
-                    entity: { 
-                        domain: "media_player" 
-                    } 
-                },
+                selector: { entity: { domain: "media_player" } },
                 required: true
             },
             {
                 name: "light_entity",
                 label: "Light Entity (Optional)",
-                selector: { 
-                    entity: { 
-                        domain: "light" 
-                    } 
-                }
+                selector: { entity: { domain: "light" } }
             },
             {
                 name: "icon",
                 label: "Default Icon (Optional)",
-                selector: { 
-                    icon: { 
-                        placeholder: "mdi:speaker" 
-                    } 
-                }
+                selector: { icon: { placeholder: "mdi:speaker" } }
             },
             {
                 name: "user_photo",
                 label: "User Photo URL (Optional)",
-                selector: { 
-                    text: { 
-                        type: "url" 
-                    } 
-                }
+                selector: { text: { type: "url" } }
             }
         ];
 
         const deviceControlsSchema = [];
-        
         if (this._config.show_toddler_lock) {
             deviceControlsSchema.push({
                 name: "toddler_lock_entity",
                 label: "Toddler Lock Entity",
-                selector: { 
-                    entity: { 
-                        domain: "switch" 
-                    } 
-                }
+                selector: { entity: { domain: "switch" } }
             });
         }
-        
         if (hasLight && this._config.show_clock_brightness) {
             deviceControlsSchema.push({
                 name: "clock_brightness_entity",
                 label: "Clock Brightness Entity",
-                selector: { 
-                    entity: { 
-                        domain: "light" 
-                    } 
-                }
+                selector: { entity: { domain: "light" } }
             });
         }
-        
         if (this._config.show_battery_indicator) {
             deviceControlsSchema.push(
-                {
-                    name: "battery_level_entity",
-                    label: "Battery Level Entity",
-                    selector: { entity: {} }
-                },
-                {
-                    name: "charging_status_entity",
-                    label: "Charging Status Entity",
-                    selector: { entity: {} }
-                }
+                { name: "battery_level_entity", label: "Battery Level Entity", selector: { entity: {} } },
+                { name: "charging_status_entity", label: "Charging Status Entity", selector: { entity: {} } }
             );
         }
 
@@ -2336,11 +1929,7 @@ class HatchCardEditor extends LitElement {
             {
                 name: "timer_entity",
                 label: "Timer Entity",
-                selector: {
-                    entity: {
-                        domain: "timer" 
-                    } 
-                }
+                selector: { entity: { domain: "timer" } }
             }
         ];
 
@@ -2424,20 +2013,16 @@ class HatchCardEditor extends LitElement {
                     ${this._expandedSections.device_controls ? html`
                         <div class="section-content">
                             <label class="switch-wrapper"><ha-switch id="show_toddler_lock" .checked="${this._config?.show_toddler_lock}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Toddler Lock</span></div></label>
-                            
                             ${hasLight ? html`
                                 <label class="switch-wrapper"><ha-switch id="show_clock_brightness" .checked="${this._config?.show_clock_brightness}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Clock Brightness</span></div></label>
                             ` : ''}
-                            
                             <label class="switch-wrapper"><ha-switch id="show_battery_indicator" .checked="${this._config?.show_battery_indicator}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Battery Indicator</span></div></label>
-                            
                             ${this._config.show_battery_indicator ? html`
                                 <label class="switch-wrapper">
                                     <ha-switch id="show_battery_percentage" .checked="${this._config?.show_battery_percentage !== false}" @change="${this._valueChanged}"></ha-switch>
                                     <div class="switch-label"><span>Show Battery Percentage</span></div>
                                 </label>
                             ` : ''}
-
                             ${deviceControlsSchema.length > 0 ? html`
                                 <ha-form
                                     .hass=${this.hass}
@@ -2483,23 +2068,7 @@ class HatchCardEditor extends LitElement {
                                     @value-changed=${this._valueChanged}
                                 ></ha-form>
                             ` : ''}
-                            <ha-textfield id="timer_presets" label="Timer Presets (minutes)" .value="${displayConfig.timer_presets ? displayConfig.timer_presets.join(', ') : '15, 30, 60, 120'}" @input="${this._valueChanged}" helper="Comma-separated values in minutes"></ha-textfield>
-														  
-																		
-										   
-								   
-																																																																						   
-																						
-											  
-																																																																						   
-								   
-																																																																					  
-											  
-																																																																
-																																																																												   
-								   
-															   
-																																																								  
+                            <ha-textfield id="timer_presets" label="Timer Presets (minutes)" .value="${this._config.timer_presets ? this._config.timer_presets.join(', ') : '15, 30, 60, 120'}" @input="${this._valueChanged}" helper="Comma-separated values in minutes"></ha-textfield>
                         </div>
                     ` : ''}
                 </div>
@@ -2617,7 +2186,6 @@ const registerEditor = () => {
     if (isEditorReady && !customElements.get("hatch-card-editor")) {
         customElements.define("hatch-card-editor", HatchCardEditor);
     } else if (!isEditorReady) {
-
         setTimeout(registerEditor, 100);
     }
 };

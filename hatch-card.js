@@ -7,10 +7,10 @@ import { LitElement, html, css } from 'https://unpkg.com/lit-element@2.0.1/lit-e
  *
  * Author: eyalgal
  * License: MIT
- * Version: 1.3.1
+ * Version: 1.4.0
  */
 
-const cardVersion = "1.3.1";
+const cardVersion = "1.4.0";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {

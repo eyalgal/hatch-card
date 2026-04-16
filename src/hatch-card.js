@@ -1,5 +1,3 @@
-import { LitElement, html, css } from 'https://unpkg.com/lit-element@2.0.1/lit-element.js?module';
-
 /*
  * Hatch Card
  *
@@ -9,6 +7,11 @@ import { LitElement, html, css } from 'https://unpkg.com/lit-element@2.0.1/lit-e
  * License: MIT
  * Version: 1.3.1
  */
+import {
+    LitElement,
+    html,
+    css
+} from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
 
 const cardVersion = "1.3.1";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
@@ -654,7 +657,7 @@ class HatchCard extends LitElement {
 
         const selectedOption = mediaState.attributes.sound_mode || 'NONE';
         const fullSoundList = [...soundListFromAttr];
-        if (!fullSoundList.includes(selectedOption)) {
+        if (selectedOption && !fullSoundList.includes(selectedOption)) {
             fullSoundList.unshift(selectedOption);
         }
 

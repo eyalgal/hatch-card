@@ -7,10 +7,10 @@ import { LitElement, html, css } from 'https://unpkg.com/lit-element@2.0.1/lit-e
  *
  * Author: eyalgal
  * License: MIT
- * Version: 1.4.0
+ * Version: 1.4.1
  */
 
-const cardVersion = "1.4.0";
+const cardVersion = "1.4.1";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {
@@ -1741,7 +1741,7 @@ class HatchCardEditor extends LitElement {
 
         let newConfig = { ...this._config };
 
-        if (e.detail && e.detail.value !== undefined) {
+        if (e.detail && e.detail.value !== undefined && typeof e.detail.value === 'object' && e.detail.value !== null) {
             newConfig = { ...this._config, ...e.detail.value };
         } else {
             const target = e.target;
@@ -1967,12 +1967,12 @@ class HatchCardEditor extends LitElement {
                     </div>
                     ${this._expandedSections.layout ? html`
                         <div class="section-content">
-                            <ha-select key="layout" label="Layout" .value="${this._config?.layout || 'horizontal'}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
+                            <ha-select key="layout" label="Layout" .value="${this._config?.layout || 'horizontal'}" .options=${[{value:'horizontal',label:'Horizontal'},{value:'vertical',label:'Vertical'}]} @selected="${this._valueChanged}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
                                 <mwc-list-item value="horizontal">Horizontal</mwc-list-item>
                                 <mwc-list-item value="vertical">Vertical</mwc-list-item>
                             </ha-select>
                             ${hasLight ? html`
-                                <ha-select key="background_mode" label="Background Mode" .value="${this._config?.background_mode || 'full'}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
+                                <ha-select key="background_mode" label="Background Mode" .value="${this._config?.background_mode || 'full'}" .options=${[{value:'none',label:'None'},{value:'full',label:'Full Color'},{value:'volume',label:'Volume Fill'}]} @selected="${this._valueChanged}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
                                     <mwc-list-item value="none">None</mwc-list-item>
                                     <mwc-list-item value="full">Full Color</mwc-list-item>
                                     <mwc-list-item value="volume">Volume Fill</mwc-list-item>
@@ -2121,7 +2121,7 @@ class HatchCardEditor extends LitElement {
                                                             <ha-textfield label="Brightness (%)" type="number" min="1" max="100" .value="${scene.brightness ?? ''}" @input="${(e) => this._updateScene(e, index, 'brightness')}"></ha-textfield>
                                                         ` : ''}
                                                         ${baseSoundModes.length > 0 ? html`
-                                                            <ha-select label="Sound Mode" .value="${scene.sound_mode || ''}" @change="${(e) => this._updateScene(e, index, 'sound_mode')}" @closed="${(e) => e.stopPropagation()}">
+                                                            <ha-select label="Sound Mode" .value="${scene.sound_mode || ''}" .options=${[{value:'',label:''}, ...sceneSoundModes.map(m => ({value:m,label:m}))]} @selected="${(e) => this._updateScene(e, index, 'sound_mode')}" @change="${(e) => this._updateScene(e, index, 'sound_mode')}" @closed="${(e) => e.stopPropagation()}">
                                                                 <mwc-list-item value=""></mwc-list-item>
                                                                 ${sceneSoundModes.map(mode => html`<mwc-list-item .value="${mode}">${mode}</mwc-list-item>`)}
                                                             </ha-select>

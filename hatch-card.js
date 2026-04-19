@@ -7,10 +7,10 @@ import { LitElement, html, css } from 'https://unpkg.com/lit-element@2.0.1/lit-e
  *
  * Author: eyalgal
  * License: MIT
- * Version: 1.4.1
+ * Version: 1.4.2
  */
 
-const cardVersion = "1.4.1";
+const cardVersion = "1.4.2";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {
@@ -1238,15 +1238,68 @@ class HatchCard extends LitElement {
         }
     }
 
+    _countAlwaysVisibleControlRows() {
+        const c = this._config;
+        if (!c) return 0;
+        // When the expand button is used, controls are hidden by default and
+        // should not influence the card's default size.
+        if (c.show_expand_button) return 0;
+        const controls = Array.isArray(c.controls_order) ? c.controls_order : [];
+        let rows = 0;
+        for (const key of controls) {
+            let enabled = false;
+            switch (key) {
+                case 'brightness':
+                    enabled = !!c.show_brightness_control && !!c.light_entity;
+                    break;
+                case 'clock_brightness':
+                    enabled = !!c.show_clock_brightness && !!c.clock_brightness_entity;
+                    break;
+                case 'volume_slider':
+                    enabled = !!c.show_volume_slider;
+                    break;
+                case 'volume_presets':
+                    enabled = Array.isArray(c.volume_presets) && c.volume_presets.length > 0;
+                    break;
+                case 'sound':
+                    enabled = !!c.show_sound_control;
+                    break;
+                case 'scenes':
+                    enabled = !!c.show_scenes && Array.isArray(c.scenes) && c.scenes.length > 0;
+                    break;
+                case 'timer':
+                    enabled = !!c.show_timer && !!c.timer_entity && typeof c.timer_entity === 'string' && c.timer_entity.startsWith('timer.');
+                    break;
+                case 'toddler_lock':
+                    enabled = !!c.show_toddler_lock && !!c.toddler_lock_entity;
+                    break;
+            }
+            if (enabled) rows++;
+        }
+        return rows;
+    }
+
     getCardSize() {
-        return this._config?.layout === 'vertical' ? 3 : 1;
+        const base = this._config?.layout === 'vertical' ? 3 : 1;
+        return base + this._countAlwaysVisibleControlRows();
     }
 
     getLayoutOptions() {
+        const extra = this._countAlwaysVisibleControlRows();
         if (this._config?.layout === 'vertical') {
-            return { grid_rows: 3, grid_min_rows: 3, grid_columns: 2, grid_min_columns: 2 };
+            return {
+                grid_rows: 3 + extra,
+                grid_min_rows: 3,
+                grid_columns: 2,
+                grid_min_columns: 2,
+            };
         }
-        return { grid_rows: 1, grid_min_rows: 1, grid_columns: 4, grid_min_columns: 2 };
+        return {
+            grid_rows: 1 + extra,
+            grid_min_rows: 1,
+            grid_columns: 4,
+            grid_min_columns: 2,
+        };
     }
 
     static get styles() {
@@ -1276,6 +1329,7 @@ class HatchCard extends LitElement {
                 align-items: center;
                 justify-content: space-between;
                 width: 100%;
+                min-width: 0;
                 gap: 12px;
                 min-height: 56px;
             }
@@ -1283,7 +1337,8 @@ class HatchCard extends LitElement {
                 display: flex;
                 align-items: center;
                 gap: 12px;
-                flex-grow: 1;
+                flex: 1 1 auto;
+                min-width: 0;
                 -webkit-tap-highlight-color: transparent;
                 min-height: 56px;
             }
@@ -1374,7 +1429,7 @@ class HatchCard extends LitElement {
                 object-fit: contain;
                 border-radius: 4px;
             }
-            .info { overflow: hidden; flex-grow: 1; }
+            .info { overflow: hidden; flex: 1 1 auto; min-width: 0; }
             .name {
                 font-size: 14px;
                 font-weight: 500;

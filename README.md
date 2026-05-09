@@ -1,11 +1,13 @@
 # 🌙 Hatch Card for Home Assistant
 [![GitHub Release][release_badge]][release]
+[![Downloads][downloads_badge]][release]
 [![Community Forum][forum_badge]][forum]
 [![Buy Me A Coffee][bmac_badge]][bmac]
 
 <!-- Link references -->
 [release_badge]: https://img.shields.io/github/v/release/eyalgal/hatch-card
 [release]: https://github.com/eyalgal/hatch-card/releases
+[downloads_badge]: https://img.shields.io/github/downloads/eyalgal/hatch-card/total.svg
 [forum_badge]: https://img.shields.io/badge/Community-Forum-5294E2.svg
 [forum]: https://community.home-assistant.io/t/hatch-card-the-all-in-one-card-for-your-hatch-sound-machine/913174
 [bmac_badge]: https://img.shields.io/badge/buy_me_a-coffee-yellow

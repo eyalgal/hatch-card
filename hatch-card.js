@@ -859,12 +859,39 @@ class HatchCard extends LitElement {
                 <input
                     type="time"
                     class="time-input"
+                    lang="${this._timeInputLang()}"
                     .value="${value}"
                     @change="${this._handleTimeChange}"
                     @click="${(e) => e.stopPropagation()}"
                 />
             </div>
         `;
+    }
+
+    // Derive the 12h/24h display for the native time input from Home
+    // Assistant's configured time format. The hour cycle of <input type="time">
+    // follows the element's lang, so map HA's setting to a representative
+    // locale (en-US = 12h, en-GB = 24h) and fall back to the system locale.
+    _timeInputLang() {
+        const fallback = (typeof navigator !== 'undefined' && navigator.language) || 'en';
+        const locale = this.hass && this.hass.locale;
+        if (!locale) return fallback;
+        let useAmPm;
+        switch (locale.time_format) {
+            case '12': useAmPm = true; break;
+            case '24': useAmPm = false; break;
+            case 'language':
+                try {
+                    useAmPm = new Intl.DateTimeFormat(locale.language, { hour: 'numeric' }).resolvedOptions().hour12;
+                } catch (_) { useAmPm = undefined; }
+                break;
+            case 'system':
+            default:
+                useAmPm = undefined;
+        }
+        if (useAmPm === true) return 'en-US';
+        if (useAmPm === false) return 'en-GB';
+        return fallback;
     }
 
     _renderScenesControl(lightColor, hasLight) {
@@ -1587,9 +1614,8 @@ class HatchCard extends LitElement {
             }
             .time-control .time-label {
                 flex: 1;
-                font-weight: 500;
                 color: var(--primary-text-color);
-                font-size: 0.95rem;
+                font-size: 1rem;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
@@ -1597,11 +1623,13 @@ class HatchCard extends LitElement {
             .time-control .time-input {
                 font-family: inherit;
                 font-size: 1rem;
+                height: 40px;
+                box-sizing: border-box;
                 color: var(--primary-text-color);
                 background: var(--secondary-background-color);
                 border: 1px solid var(--divider-color);
                 border-radius: 8px;
-                padding: 6px 10px;
+                padding: 0 10px;
                 cursor: pointer;
                 color-scheme: light dark;
             }

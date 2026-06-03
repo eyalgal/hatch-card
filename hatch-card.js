@@ -7,10 +7,10 @@ import { LitElement, html, css } from 'https://unpkg.com/lit-element@2.0.1/lit-e
  *
  * Author: eyalgal
  * License: MIT
- * Version: 1.4.2
+ * Version: 1.5.0
  */
 
-const cardVersion = "1.4.2";
+const cardVersion = "1.5.0";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {
@@ -159,6 +159,9 @@ class HatchCard extends LitElement {
             show_timer: false,
             timer_entity: null,
             sync_hatch_timer: true,
+            show_time: false,
+            time_entity: null,
+            time_name: null,
             show_scenes: false,
             show_toddler_lock: false,
             toddler_lock_entity: null,
@@ -190,6 +193,7 @@ class HatchCard extends LitElement {
                 'sound',
                 'scenes',
                 'timer',
+                'time',
                 'toddler_lock'
             ],
             ...config,
@@ -385,6 +389,7 @@ class HatchCard extends LitElement {
                 case 'sound': return this._config.show_sound_control && mediaState.attributes.sound_mode_list && mediaState.attributes.sound_mode_list.length > 0;
                 case 'scenes': return this._config.show_scenes;
                 case 'timer': return this._config.show_timer && !!this._config.timer_entity && this._config.timer_entity.startsWith('timer.');
+                case 'time': return this._config.show_time && !!this._config.time_entity;
                 case 'toddler_lock': return this._config.show_toddler_lock;
                 default: return false;
             }
@@ -512,6 +517,10 @@ class HatchCard extends LitElement {
             timer: {
                 is_visible: () => this._config.show_timer && !!this._config.timer_entity && this._config.timer_entity.startsWith('timer.'),
                 render: () => this._renderTimerControl(lightColor),
+            },
+            time: {
+                is_visible: () => this._config.show_time && !!this._config.time_entity,
+                render: () => this._renderTimeControl(),
             },
             toddler_lock: {
                 is_visible: () => this._config.show_toddler_lock && this._config.toddler_lock_entity,
@@ -819,6 +828,41 @@ class HatchCard extends LitElement {
                         </button>
                     ` : ''}
                 </div>
+            </div>
+        `;
+    }
+
+    _renderTimeControl() {
+        const timeEntityId = this._config.time_entity;
+        if (!timeEntityId) return html``;
+
+        const timeEntity = this.hass.states[timeEntityId];
+        if (!timeEntity) {
+            return this._renderWarning(`Entity not found: ${timeEntityId}`);
+        }
+
+        const attrs = timeEntity.attributes || {};
+        if (attrs.has_time === false) {
+            return this._renderWarning(`${timeEntityId} has no time component.`);
+        }
+
+        const hh = String(attrs.hour ?? 0).padStart(2, '0');
+        const mm = String(attrs.minute ?? 0).padStart(2, '0');
+        const value = `${hh}:${mm}`;
+        const icon = attrs.icon || 'mdi:alarm';
+        const label = this._config.time_name || attrs.friendly_name || 'Time';
+
+        return html`
+            <div class="control-row time-control">
+                <ha-icon icon="${icon}"></ha-icon>
+                <span class="time-label">${label}</span>
+                <input
+                    type="time"
+                    class="time-input"
+                    .value="${value}"
+                    @change="${this._handleTimeChange}"
+                    @click="${(e) => e.stopPropagation()}"
+                />
             </div>
         `;
     }
@@ -1135,6 +1179,18 @@ class HatchCard extends LitElement {
         });
     }
 
+    _handleTimeChange(e) {
+        const value = e.target.value;
+        if (!value) return;
+        this._vibrate();
+        const [hh = '0', mm = '0'] = value.split(':');
+        const time = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00`;
+        this.hass.callService("input_datetime", "set_datetime", {
+            entity_id: this._config.time_entity,
+            time: time,
+        });
+    }
+
     _formatDurationForService(totalSeconds) {
         const s = Math.max(0, Math.floor(totalSeconds));
         const h = Math.floor(s / 3600);
@@ -1269,6 +1325,9 @@ class HatchCard extends LitElement {
                     break;
                 case 'timer':
                     enabled = !!c.show_timer && !!c.timer_entity && typeof c.timer_entity === 'string' && c.timer_entity.startsWith('timer.');
+                    break;
+                case 'time':
+                    enabled = !!c.show_time && !!c.time_entity;
                     break;
                 case 'toddler_lock':
                     enabled = !!c.show_toddler_lock && !!c.toddler_lock_entity;
@@ -1526,7 +1585,30 @@ class HatchCard extends LitElement {
                 min-width: 24px;
                 text-align: right;
             }
-            .slider-container {
+            .time-control .time-label {
+                flex: 1;
+                font-weight: 500;
+                color: var(--primary-text-color);
+                font-size: 0.95rem;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .time-control .time-input {
+                font-family: inherit;
+                font-size: 1rem;
+                color: var(--primary-text-color);
+                background: var(--secondary-background-color);
+                border: 1px solid var(--divider-color);
+                border-radius: 8px;
+                padding: 6px 10px;
+                cursor: pointer;
+                color-scheme: light dark;
+            }
+            .time-control .time-input:focus {
+                outline: none;
+                border-color: var(--primary-color);
+            }
                 position: relative;
                 flex: 1;
                 height: 40px;
@@ -1752,6 +1834,7 @@ class HatchCardEditor extends LitElement {
             hass: {},
             _config: {},
             _expandedSections: { type: Object },
+            _searchQuery: { type: String },
             _editingSceneIndex: { type: Number }
         };
     }
@@ -1776,11 +1859,48 @@ class HatchCardEditor extends LitElement {
             timer: false,
             scenes: false
         };
+        this._searchQuery = "";
         this._editingSceneIndex = null;
     }
 
     setConfig(config) {
         this._config = { ...config };
+    }
+
+    updated() {
+        this._applySearchFilter();
+    }
+
+    _applySearchFilter() {
+        const root = this.shadowRoot;
+        if (!root) return;
+        const q = (this._searchQuery || "").trim().toLowerCase();
+        const panels = root.querySelectorAll("ha-expansion-panel");
+        panels.forEach((panel) => {
+            const body = panel.querySelector(".panel-body");
+            if (!body) return;
+            let matchCount = 0;
+            Array.from(body.children).forEach((el) => {
+                const text = this._extractSearchableText(el);
+                const matches = !q || text.includes(q);
+                el.toggleAttribute("data-search-hidden", !!q && !matches);
+                if (matches) matchCount++;
+            });
+            panel.toggleAttribute("data-search-hidden", !!q && matchCount === 0);
+        });
+    }
+
+    _extractSearchableText(el) {
+        if (!el || el.nodeType !== 1) return "";
+        const parts = [];
+        const dataText = el.getAttribute && el.getAttribute("data-search-text");
+        if (dataText) parts.push(dataText);
+        const own = el.getAttribute && el.getAttribute("label");
+        if (own) parts.push(own);
+        const labelled = el.querySelectorAll ? el.querySelectorAll("[label]") : [];
+        labelled.forEach((n) => { const v = n.getAttribute("label"); if (v) parts.push(v); });
+        if (el.textContent) parts.push(el.textContent);
+        return parts.join(" ").toLowerCase();
     }
 
     _toggleSection(section) {
@@ -1845,10 +1965,11 @@ class HatchCardEditor extends LitElement {
                 scenes_per_row: 4,
                 show_toddler_lock: false,
                 show_clock_brightness: false,
+                show_time: false,
                 show_battery_indicator: false,
                 show_battery_percentage: true,
                 controls_order: [
-                    'brightness', 'clock_brightness', 'volume_slider', 'volume_presets', 'sound', 'scenes', 'timer', 'toddler_lock'
+                    'brightness', 'clock_brightness', 'volume_slider', 'volume_presets', 'sound', 'scenes', 'timer', 'time', 'toddler_lock'
                 ],
             };
 
@@ -1981,6 +2102,18 @@ class HatchCardEditor extends LitElement {
                 selector: { entity: { domain: "light" } }
             });
         }
+        if (this._config.show_time) {
+            deviceControlsSchema.push({
+                name: "time_entity",
+                label: "Time Entity (input_datetime)",
+                selector: { entity: { domain: "input_datetime" } }
+            });
+            deviceControlsSchema.push({
+                name: "time_name",
+                label: "Time Label (Optional)",
+                selector: { text: {} }
+            });
+        }
         if (this._config.show_battery_indicator) {
             deviceControlsSchema.push(
                 { name: "battery_level_entity", label: "Battery Level Entity", selector: { entity: {} } },
@@ -1996,217 +2129,213 @@ class HatchCardEditor extends LitElement {
             }
         ];
 
-        return html`
-            <div class="card-config">
-                <div class="section">
-                    <div class="section-header" @click="${() => this._toggleSection('basic')}">
-                        <span class="section-title">Basic Configuration</span>
-                        <ha-icon icon="${this._expandedSections.basic ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
+        const panel = (key, title, icon, content) => {
+            const isSearching = !!(this._searchQuery && this._searchQuery.trim());
+            const expanded = isSearching ? true : !!this._expandedSections?.[key];
+            return html`
+                <ha-expansion-panel
+                    outlined
+                    ?expanded=${expanded}
+                    @expanded-changed=${(e) => { this._expandedSections = { ...(this._expandedSections || {}), [key]: !!e.detail?.expanded }; }}
+                >
+                    <div slot="header" class="panel-header">
+                        <ha-icon class="panel-header-icon" icon=${icon}></ha-icon>
+                        <span class="panel-header-label">${title}</span>
                     </div>
-                    ${this._expandedSections.basic ? html`
-                        <div class="section-content">
-                            <ha-form
-                                .hass=${this.hass}
-                                .data=${this._config}
-                                .schema=${basicSchema}
-                                @value-changed=${this._valueChanged}
-                            ></ha-form>
-                        </div>
-                    ` : ''}
-                </div>
+                    <div class="panel-body">${content}</div>
+                </ha-expansion-panel>
+            `;
+        };
 
-                <div class="section">
-                    <div class="section-header" @click="${() => this._toggleSection('layout')}">
-                        <span class="section-title">Layout Options</span>
-                        <ha-icon icon="${this._expandedSections.layout ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
-                    </div>
-                    ${this._expandedSections.layout ? html`
-                        <div class="section-content">
-                            <ha-select key="layout" label="Layout" .value="${this._config?.layout || 'horizontal'}" .options=${[{value:'horizontal',label:'Horizontal'},{value:'vertical',label:'Vertical'}]} @selected="${this._valueChanged}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
-                                <mwc-list-item value="horizontal">Horizontal</mwc-list-item>
-                                <mwc-list-item value="vertical">Vertical</mwc-list-item>
-                            </ha-select>
-                            ${hasLight ? html`
-                                <ha-select key="background_mode" label="Background Mode" .value="${this._config?.background_mode || 'full'}" .options=${[{value:'none',label:'None'},{value:'full',label:'Full Color'},{value:'volume',label:'Volume Fill'}]} @selected="${this._valueChanged}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
-                                    <mwc-list-item value="none">None</mwc-list-item>
-                                    <mwc-list-item value="full">Full Color</mwc-list-item>
-                                    <mwc-list-item value="volume">Volume Fill</mwc-list-item>
-                                </ha-select>
-                            ` : ''}
-                            <ha-textfield id="secondary_info" label="Secondary Info (Optional)" .value="${this._config?.secondary_info !== undefined ? this._config.secondary_info : 'Volume {volume}%'}" @input="${this._valueChanged}" helper="Use {volume}, {sound}, {brightness} as placeholders"></ha-textfield>
-                            <ha-textfield
-                                id="controls_order"
-                                label="Expanded Controls Order (Optional)"
-                                .value="${(this._config?.controls_order || ['brightness', 'clock_brightness', 'volume_slider', 'volume_presets', 'sound', 'scenes', 'timer', 'toddler_lock']).join(', ')}"
-                                @input="${this._valueChanged}"
-                                helper="Comma-separated list of control keys."
-                            ></ha-textfield>
-                        </div>
-                    ` : ''}
-                </div>
+        const basicContent = html`
+            <div class="form-block" data-search-text="name media player entity light entity default icon user photo url">
+                <ha-form
+                    .hass=${this.hass}
+                    .data=${this._config}
+                    .schema=${basicSchema}
+                    @value-changed=${this._valueChanged}
+                ></ha-form>
+            </div>
+        `;
 
-                <div class="section">
-                    <div class="section-header" @click="${() => this._toggleSection('controls')}">
-                        <span class="section-title">Control Visibility</span>
-                        <ha-icon icon="${this._expandedSections.controls ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
-                    </div>
-                    ${this._expandedSections.controls ? html`
-                        <div class="section-content">
-                            <div class="switches">
-                                <label class="switch-wrapper"><ha-switch id="show_volume_buttons" .checked="${this._config?.show_volume_buttons !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Volume Buttons</span></div></label>
-                                <label class="switch-wrapper"><ha-switch id="show_volume_slider" .checked="${this._config?.show_volume_slider === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Volume Slider</span></div></label>
-                                <label class="switch-wrapper"><ha-switch id="show_expand_button" .checked="${this._config?.show_expand_button === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Expand Button</span><div class="switch-description">Hide controls behind a toggle button</div></div></label>
-                                <label class="switch-wrapper"><ha-switch id="show_sound_control" .checked="${this._config?.show_sound_control === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Sound Control</span></div></label>
-                                ${hasLight ? html`
-                                    <label class="switch-wrapper"><ha-switch id="show_brightness_control" .checked="${this._config?.show_brightness_control === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Brightness Control</span></div></label>
-                                    <label class="switch-wrapper"><ha-switch id="show_brightness_when_off" .checked="${this._config?.show_brightness_when_off === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Brightness When Off</span></div></label>
-                                ` : ''}
-                                <label class="switch-wrapper"><ha-switch id="show_timer" .checked="${this._config?.show_timer === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Timer Control</span></div></label>
-                                <label class="switch-wrapper"><ha-switch id="show_scenes" .checked="${this._config?.show_scenes === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Scene Control</span></div></label>
+        const layoutContent = html`
+            <ha-select key="layout" label="Layout" .value="${this._config?.layout || 'horizontal'}" .options=${[{value:'horizontal',label:'Horizontal'},{value:'vertical',label:'Vertical'}]} @selected="${this._valueChanged}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
+                <mwc-list-item value="horizontal">Horizontal</mwc-list-item>
+                <mwc-list-item value="vertical">Vertical</mwc-list-item>
+            </ha-select>
+            ${hasLight ? html`
+                <ha-select key="background_mode" label="Background Mode" .value="${this._config?.background_mode || 'full'}" .options=${[{value:'none',label:'None'},{value:'full',label:'Full Color'},{value:'volume',label:'Volume Fill'}]} @selected="${this._valueChanged}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
+                    <mwc-list-item value="none">None</mwc-list-item>
+                    <mwc-list-item value="full">Full Color</mwc-list-item>
+                    <mwc-list-item value="volume">Volume Fill</mwc-list-item>
+                </ha-select>
+            ` : ''}
+            <ha-textfield id="secondary_info" label="Secondary Info (Optional)" .value="${this._config?.secondary_info !== undefined ? this._config.secondary_info : 'Volume {volume}%'}" @input="${this._valueChanged}" helper="Use {volume}, {sound}, {brightness} as placeholders"></ha-textfield>
+            <ha-textfield
+                id="controls_order"
+                label="Expanded Controls Order (Optional)"
+                .value="${(this._config?.controls_order || ['brightness', 'clock_brightness', 'volume_slider', 'volume_presets', 'sound', 'scenes', 'timer', 'time', 'toddler_lock']).join(', ')}"
+                @input="${this._valueChanged}"
+                helper="Comma-separated list of control keys."
+            ></ha-textfield>
+        `;
+
+        const controlsContent = html`
+            <div class="switches">
+                <label class="switch-wrapper"><ha-switch id="show_volume_buttons" .checked="${this._config?.show_volume_buttons !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Volume Buttons</span></div></label>
+                <label class="switch-wrapper"><ha-switch id="show_volume_slider" .checked="${this._config?.show_volume_slider === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Volume Slider</span></div></label>
+                <label class="switch-wrapper"><ha-switch id="show_expand_button" .checked="${this._config?.show_expand_button === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Expand Button</span><div class="switch-description">Hide controls behind a toggle button</div></div></label>
+                <label class="switch-wrapper"><ha-switch id="show_sound_control" .checked="${this._config?.show_sound_control === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Sound Control</span></div></label>
+                ${hasLight ? html`
+                    <label class="switch-wrapper"><ha-switch id="show_brightness_control" .checked="${this._config?.show_brightness_control === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Brightness Control</span></div></label>
+                    <label class="switch-wrapper"><ha-switch id="show_brightness_when_off" .checked="${this._config?.show_brightness_when_off === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Brightness When Off</span></div></label>
+                ` : ''}
+                <label class="switch-wrapper"><ha-switch id="show_timer" .checked="${this._config?.show_timer === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Timer Control</span></div></label>
+                <label class="switch-wrapper"><ha-switch id="show_scenes" .checked="${this._config?.show_scenes === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Scene Control</span></div></label>
+            </div>
+        `;
+
+        const deviceControlsContent = html`
+            <label class="switch-wrapper"><ha-switch id="show_toddler_lock" .checked="${this._config?.show_toddler_lock}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Toddler Lock</span></div></label>
+            ${hasLight ? html`
+                <label class="switch-wrapper"><ha-switch id="show_clock_brightness" .checked="${this._config?.show_clock_brightness}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Clock Brightness</span></div></label>
+            ` : ''}
+            <label class="switch-wrapper"><ha-switch id="show_time" .checked="${this._config?.show_time}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Time Selector</span><div class="switch-description">Pick and edit an input_datetime time helper</div></div></label>
+            <label class="switch-wrapper"><ha-switch id="show_battery_indicator" .checked="${this._config?.show_battery_indicator}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Battery Indicator</span></div></label>
+            ${this._config.show_battery_indicator ? html`
+                <label class="switch-wrapper">
+                    <ha-switch id="show_battery_percentage" .checked="${this._config?.show_battery_percentage !== false}" @change="${this._valueChanged}"></ha-switch>
+                    <div class="switch-label"><span>Show Battery Percentage</span></div>
+                </label>
+            ` : ''}
+            ${deviceControlsSchema.length > 0 ? html`
+                <div class="form-block" data-search-text="toddler lock entity clock brightness entity time entity input_datetime time label battery level charging status">
+                    <ha-form
+                        .hass=${this.hass}
+                        .data=${this._config}
+                        .schema=${deviceControlsSchema}
+                        @value-changed=${this._valueChanged}
+                    ></ha-form>
+                </div>
+            ` : ''}
+        `;
+
+        const advancedContent = html`
+            <label class="switch-wrapper"><ha-switch id="haptic" .checked="${this._config?.haptic !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Haptic Feedback</span></div></label>
+            ${hasLight ? html`
+                <label class="switch-wrapper"><ha-switch id="volume_click_control" .checked="${this._config?.volume_click_control !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Volume Click Control</span><div class="switch-description">Click on card background to set volume</div></div></label>
+            ` : ''}
+            <ha-textfield id="volume_presets" label="Volume Presets (Optional)" .value="${this._config?.volume_presets ? this._config.volume_presets.join(', ') : ''}" @input="${this._valueChanged}" helper="Comma-separated values (0.0-1.0): 0.2, 0.5, 0.8"></ha-textfield>
+            <ha-textfield id="volume_step" label="Volume Step" type="number" min="0.01" max="0.5" step="0.01" .value="${this._config?.volume_step || 0.01}" @input="${this._valueChanged}" helper="Volume change per button press"></ha-textfield>
+            <ha-textfield id="animation_duration" label="Animation Duration (ms)" type="number" min="0" max="1000" step="50" .value="${this._config?.animation_duration || 250}" @input="${this._valueChanged}"></ha-textfield>
+        `;
+
+        const timerContent = html`
+            ${timerSchema.length > 0 ? html`
+                <div class="form-block" data-search-text="timer entity">
+                    <ha-form
+                        .hass=${this.hass}
+                        .data=${this._config}
+                        .schema=${timerSchema}
+                        @value-changed=${this._valueChanged}
+                    ></ha-form>
+                </div>
+            ` : ''}
+            <ha-textfield id="timer_presets" label="Timer Presets (minutes)" .value="${this._config.timer_presets ? this._config.timer_presets.join(', ') : '15, 30, 60, 120'}" @input="${this._valueChanged}" helper="Comma-separated values in minutes"></ha-textfield>
+        `;
+
+        const scenesContent = html`
+            <ha-textfield id="scenes_per_row" label="Scenes Per Row" type="number" min="1" max="8" .value="${this._config?.scenes_per_row || 4}" @input="${this._valueChanged}" helper="Number of scene buttons per row"></ha-textfield>
+            <div class="subsection-title">Scenes</div>
+            ${this._config?.scenes && this._config.scenes.length > 0 ? html`
+                <div class="scene-list">
+                    ${this._config.scenes.map((scene, index) => {
+                        const configuredSceneSound = scene.sound_mode;
+                        const sceneSoundModes = [...baseSoundModes];
+                        if (configuredSceneSound && !sceneSoundModes.includes(configuredSceneSound)) sceneSoundModes.unshift(configuredSceneSound);
+                        return html`
+                        <div class="scene-item">
+                            <div class="scene-summary" @click="${() => this._editScene(index)}">
+                                <ha-icon icon="${scene.icon || 'mdi:palette'}"></ha-icon>
+                                <span>${scene.name || `Scene ${index + 1}`}</span>
+                                <ha-icon icon="mdi:delete" class="delete-icon" @click="${(e) => { e.stopPropagation(); this._deleteScene(index); }}"></ha-icon>
                             </div>
-                        </div>
-                    ` : ''}
-                </div>
-
-                <div class="section">
-                    <div class="section-header" @click="${() => this._toggleSection('device_controls')}">
-                        <span class="section-title">Device-Specific Controls</span>
-                        <ha-icon icon="${this._expandedSections.device_controls ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
-                    </div>
-                    ${this._expandedSections.device_controls ? html`
-                        <div class="section-content">
-                            <label class="switch-wrapper"><ha-switch id="show_toddler_lock" .checked="${this._config?.show_toddler_lock}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Toddler Lock</span></div></label>
-                            ${hasLight ? html`
-                                <label class="switch-wrapper"><ha-switch id="show_clock_brightness" .checked="${this._config?.show_clock_brightness}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Clock Brightness</span></div></label>
-                            ` : ''}
-                            <label class="switch-wrapper"><ha-switch id="show_battery_indicator" .checked="${this._config?.show_battery_indicator}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Battery Indicator</span></div></label>
-                            ${this._config.show_battery_indicator ? html`
-                                <label class="switch-wrapper">
-                                    <ha-switch id="show_battery_percentage" .checked="${this._config?.show_battery_percentage !== false}" @change="${this._valueChanged}"></ha-switch>
-                                    <div class="switch-label"><span>Show Battery Percentage</span></div>
-                                </label>
-                            ` : ''}
-                            ${deviceControlsSchema.length > 0 ? html`
-                                <ha-form
-                                    .hass=${this.hass}
-                                    .data=${this._config}
-                                    .schema=${deviceControlsSchema}
-                                    @value-changed=${this._valueChanged}
-                                ></ha-form>
-                            ` : ''}
-                        </div>
-                    ` : ''}
-                </div>
-
-                <div class="section">
-                    <div class="section-header" @click="${() => this._toggleSection('advanced')}">
-                        <span class="section-title">Advanced Options</span>
-                        <ha-icon icon="${this._expandedSections.advanced ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
-                    </div>
-                    ${this._expandedSections.advanced ? html`
-                        <div class="section-content">
-                            <label class="switch-wrapper"><ha-switch id="haptic" .checked="${this._config?.haptic !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Haptic Feedback</span></div></label>
-                            ${hasLight ? html`
-                                <label class="switch-wrapper"><ha-switch id="volume_click_control" .checked="${this._config?.volume_click_control !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Volume Click Control</span><div class="switch-description">Click on card background to set volume</div></div></label>
-                            ` : ''}
-                            <ha-textfield id="volume_presets" label="Volume Presets (Optional)" .value="${this._config?.volume_presets ? this._config.volume_presets.join(', ') : ''}" @input="${this._valueChanged}" helper="Comma-separated values (0.0-1.0): 0.2, 0.5, 0.8"></ha-textfield>
-                            <ha-textfield id="volume_step" label="Volume Step" type="number" min="0.01" max="0.5" step="0.01" .value="${this._config?.volume_step || 0.01}" @input="${this._valueChanged}" helper="Volume change per button press"></ha-textfield>
-                            <ha-textfield id="animation_duration" label="Animation Duration (ms)" type="number" min="0" max="1000" step="50" .value="${this._config?.animation_duration || 250}" @input="${this._valueChanged}"></ha-textfield>
-                        </div>
-                    ` : ''}
-                </div>
-
-                <div class="section">
-                    <div class="section-header" @click="${() => this._toggleSection('timer')}">
-                        <span class="section-title">Timer Options</span>
-                        <ha-icon icon="${this._expandedSections.timer ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
-                    </div>
-                    ${this._expandedSections.timer ? html`
-                        <div class="section-content">
-                            ${timerSchema.length > 0 ? html`
-                                <ha-form
-                                    .hass=${this.hass}
-                                    .data=${this._config}
-                                    .schema=${timerSchema}
-                                    @value-changed=${this._valueChanged}
-                                ></ha-form>
-                            ` : ''}
-                            <ha-textfield id="timer_presets" label="Timer Presets (minutes)" .value="${this._config.timer_presets ? this._config.timer_presets.join(', ') : '15, 30, 60, 120'}" @input="${this._valueChanged}" helper="Comma-separated values in minutes"></ha-textfield>
-                        </div>
-                    ` : ''}
-                </div>
-
-                <div class="section">
-                    <div class="section-header" @click="${() => this._toggleSection('scenes')}">
-                        <span class="section-title">Scene Control</span>
-                        <ha-icon icon="${this._expandedSections.scenes ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
-                    </div>
-                    ${this._expandedSections.scenes ? html`
-                        <div class="section-content">
-                            <ha-textfield id="scenes_per_row" label="Scenes Per Row" type="number" min="1" max="8" .value="${this._config?.scenes_per_row || 4}" @input="${this._valueChanged}" helper="Number of scene buttons per row"></ha-textfield>
-                            <div class="subsection-title">Scenes</div>
-                            ${this._config?.scenes && this._config.scenes.length > 0 ? html`
-                                <div class="scene-list">
-                                    ${this._config.scenes.map((scene, index) => {
-                                        const configuredSceneSound = scene.sound_mode;
-                                        const sceneSoundModes = [...baseSoundModes];
-                                        if (configuredSceneSound && !sceneSoundModes.includes(configuredSceneSound)) sceneSoundModes.unshift(configuredSceneSound);
-                                        return html`
-                                        <div class="scene-item">
-                                            <div class="scene-summary" @click="${() => this._editScene(index)}">
-                                                <ha-icon icon="${scene.icon || 'mdi:palette'}"></ha-icon>
-                                                <span>${scene.name || `Scene ${index + 1}`}</span>
-                                                <ha-icon icon="mdi:delete" class="delete-icon" @click="${(e) => { e.stopPropagation(); this._deleteScene(index); }}"></ha-icon>
-                                            </div>
-                                            ${this._editingSceneIndex === index ? html`
-                                                <div class="scene-edit">
-                                                    <ha-textfield label="Name" .value="${scene.name || ''}" @input="${(e) => this._updateScene(e, index, 'name')}" placeholder="Scene name"></ha-textfield>
-                                                    <ha-icon-picker label="Icon" .value="${scene.icon || ''}" @value-changed="${(e) => this._updateScene(e, index, 'icon')}" .placeholder="${'mdi:palette'}"></ha-icon-picker>
-                                                    <div class="subsection-title">Option 1: Activate HA Scene</div>
-                                                    <ha-entity-picker .hass=${this.hass} .value=${scene.entity_id} @value-changed=${(e) => this._updateScene(e, index, 'entity_id')} label="Scene Entity (Optional)" .includeDomains=${["scene"]}></ha-entity-picker>
-                                                    <ha-textfield label="Transition (seconds)" type="number" min="0" .value="${scene.transition ?? ''}" @input="${(e) => this._updateScene(e, index, 'transition')}"></ha-textfield>
-                                                    <div class="subsection-title">Option 2: Manual Controls</div>
-                                                    <div class="manual-controls ${scene.entity_id ? 'disabled' : ''}">
-                                                        ${hasLight ? html`
-                                                            <label class="switch-wrapper"><ha-switch .checked="${scene.turn_off_light === true}" @change="${(e) => this._updateScene(e, index, 'turn_off_light')}"></ha-switch><div class="switch-label"><span>Turn Off Light</span></div></label>
-                                                        ` : ''}
-                                                        <label class="switch-wrapper"><ha-switch .checked="${scene.turn_off_media === true}" @change="${(e) => this._updateScene(e, index, 'turn_off_media')}"></ha-switch><div class="switch-label"><span>Turn Off Media</span></div></label>
-                                                        ${hasLight ? html`
-                                                            <ha-textfield label="Color" .value="${scene.color ? getColorNameFromRgb(scene.color) : ''}" @input="${(e) => this._updateScene(e, index, 'color')}" helper="Color name or RGB (255,255,255)"></ha-textfield>
-                                                            <ha-textfield label="Brightness (%)" type="number" min="1" max="100" .value="${scene.brightness ?? ''}" @input="${(e) => this._updateScene(e, index, 'brightness')}"></ha-textfield>
-                                                        ` : ''}
-                                                        ${baseSoundModes.length > 0 ? html`
-                                                            <ha-select label="Sound Mode" .value="${scene.sound_mode || ''}" .options=${[{value:'',label:''}, ...sceneSoundModes.map(m => ({value:m,label:m}))]} @selected="${(e) => this._updateScene(e, index, 'sound_mode')}" @change="${(e) => this._updateScene(e, index, 'sound_mode')}" @closed="${(e) => e.stopPropagation()}">
-                                                                <mwc-list-item value=""></mwc-list-item>
-                                                                ${sceneSoundModes.map(mode => html`<mwc-list-item .value="${mode}">${mode}</mwc-list-item>`)}
-                                                            </ha-select>
-                                                        ` : ''}
-                                                        <ha-textfield label="Volume (%)" type="number" min="0" max="100" .value="${scene.volume ?? ''}" @input="${(e) => this._updateScene(e, index, 'volume')}"></ha-textfield>
-                                                    </div>
-                                                    <button class="done-button" @click="${() => this._editingSceneIndex = null}">Done</button>
-                                                </div>
-                                            ` : ''}
-                                        </div>
-                                        `})}
+                            ${this._editingSceneIndex === index ? html`
+                                <div class="scene-edit">
+                                    <ha-textfield label="Name" .value="${scene.name || ''}" @input="${(e) => this._updateScene(e, index, 'name')}" placeholder="Scene name"></ha-textfield>
+                                    <ha-icon-picker label="Icon" .value="${scene.icon || ''}" @value-changed="${(e) => this._updateScene(e, index, 'icon')}" .placeholder="${'mdi:palette'}"></ha-icon-picker>
+                                    <div class="subsection-title">Option 1: Activate HA Scene</div>
+                                    <ha-entity-picker .hass=${this.hass} .value=${scene.entity_id} @value-changed=${(e) => this._updateScene(e, index, 'entity_id')} label="Scene Entity (Optional)" .includeDomains=${["scene"]}></ha-entity-picker>
+                                    <ha-textfield label="Transition (seconds)" type="number" min="0" .value="${scene.transition ?? ''}" @input="${(e) => this._updateScene(e, index, 'transition')}"></ha-textfield>
+                                    <div class="subsection-title">Option 2: Manual Controls</div>
+                                    <div class="manual-controls ${scene.entity_id ? 'disabled' : ''}">
+                                        ${hasLight ? html`
+                                            <label class="switch-wrapper"><ha-switch .checked="${scene.turn_off_light === true}" @change="${(e) => this._updateScene(e, index, 'turn_off_light')}"></ha-switch><div class="switch-label"><span>Turn Off Light</span></div></label>
+                                        ` : ''}
+                                        <label class="switch-wrapper"><ha-switch .checked="${scene.turn_off_media === true}" @change="${(e) => this._updateScene(e, index, 'turn_off_media')}"></ha-switch><div class="switch-label"><span>Turn Off Media</span></div></label>
+                                        ${hasLight ? html`
+                                            <ha-textfield label="Color" .value="${scene.color ? getColorNameFromRgb(scene.color) : ''}" @input="${(e) => this._updateScene(e, index, 'color')}" helper="Color name or RGB (255,255,255)"></ha-textfield>
+                                            <ha-textfield label="Brightness (%)" type="number" min="1" max="100" .value="${scene.brightness ?? ''}" @input="${(e) => this._updateScene(e, index, 'brightness')}"></ha-textfield>
+                                        ` : ''}
+                                        ${baseSoundModes.length > 0 ? html`
+                                            <ha-select label="Sound Mode" .value="${scene.sound_mode || ''}" .options=${[{value:'',label:''}, ...sceneSoundModes.map(m => ({value:m,label:m}))]} @selected="${(e) => this._updateScene(e, index, 'sound_mode')}" @change="${(e) => this._updateScene(e, index, 'sound_mode')}" @closed="${(e) => e.stopPropagation()}">
+                                                <mwc-list-item value=""></mwc-list-item>
+                                                ${sceneSoundModes.map(mode => html`<mwc-list-item .value="${mode}">${mode}</mwc-list-item>`)}
+                                            </ha-select>
+                                        ` : ''}
+                                        <ha-textfield label="Volume (%)" type="number" min="0" max="100" .value="${scene.volume ?? ''}" @input="${(e) => this._updateScene(e, index, 'volume')}"></ha-textfield>
+                                    </div>
+                                    <button class="done-button" @click="${() => this._editingSceneIndex = null}">Done</button>
                                 </div>
-                            ` : html`<div class="no-scenes">No scenes configured</div>`}
-                            <button class="add-scene-button" @click="${this._addScene}"><ha-icon icon="mdi:plus"></ha-icon>Add Scene</button>
+                            ` : ''}
                         </div>
-                    ` : ''}
+                        `})}
                 </div>
+            ` : html`<div class="no-scenes">No scenes configured</div>`}
+            <button class="add-scene-button" @click="${this._addScene}"><ha-icon icon="mdi:plus"></ha-icon>Add Scene</button>
+        `;
+
+        return html`
+            <div class="editor-toolbar">
+                <ha-textfield
+                    class="editor-search"
+                    outlined
+                    label="Search settings"
+                    .value=${this._searchQuery || ''}
+                    @input=${(e) => { this._searchQuery = e.target.value || ''; }}
+                ></ha-textfield>
+            </div>
+            <div class="card-config">
+                ${panel('basic', 'Basic Configuration', 'mdi:tune', basicContent)}
+                ${panel('layout', 'Layout Options', 'mdi:view-dashboard-outline', layoutContent)}
+                ${panel('controls', 'Control Visibility', 'mdi:toggle-switch-outline', controlsContent)}
+                ${panel('device_controls', 'Device-Specific Controls', 'mdi:devices', deviceControlsContent)}
+                ${panel('advanced', 'Advanced Options', 'mdi:cog-outline', advancedContent)}
+                ${panel('timer', 'Timer Options', 'mdi:timer-outline', timerContent)}
+                ${panel('scenes', 'Scene Control', 'mdi:palette', scenesContent)}
             </div>
         `;
     }
 
     static get styles() {
         return css`
-            .card-config { display: flex; flex-direction: column; gap: 4px; }
-            .section { background: var(--card-background-color); border-radius: 8px; overflow: hidden; margin-bottom: 4px; }
-            .section-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; cursor: pointer; user-select: none; background: var(--card-background-color); transition: background-color 0.2s; }
-            .section-header:hover { background: rgba(var(--rgb-primary-text-color), 0.04); }
-            .section-title { font-weight: 500; font-size: 15px; color: var(--primary-text-color); margin: 0; }
-            .section-header ha-icon { color: var(--secondary-text-color); transition: transform 0.2s; }
-            .section-content { padding: 0 16px 16px 16px; display: flex; flex-direction: column; gap: 16px; animation: slideDown 0.2s ease-out; }
+            .card-config { display: flex; flex-direction: column; gap: 8px; }
+            .editor-toolbar { padding: 4px 0 8px; }
+            .editor-search { width: 100%; }
+            [data-search-hidden] { display: none !important; }
+            ha-expansion-panel {
+                --expansion-panel-summary-padding: 0 16px;
+                --expansion-panel-content-padding: 0;
+                border: 1px solid var(--divider-color);
+                border-radius: 8px;
+                background: var(--card-background-color);
+                overflow: hidden;
+            }
+            .panel-header { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 0; }
+            .panel-header-icon { --mdc-icon-size: 20px; color: var(--secondary-text-color); flex-shrink: 0; }
+            .panel-header-label { font-size: 14px; font-weight: 500; color: var(--primary-text-color); flex: 1; min-width: 0; }
+            .panel-body { padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 16px; }
+            .form-block { display: flex; flex-direction: column; gap: 16px; }
             @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
             .subsection-title { font-weight: 500; margin-top: 8px; margin-bottom: -8px; color: var(--primary-text-color); font-size: 0.9rem; }
             ha-select, ha-textfield, ha-entity-picker, ha-icon-picker { width: 100%; }
@@ -2309,5 +2438,12 @@ setTimeout(() => {
         preview: true,
         description: "A custom card to control a Hatch Rest device.",
         editor: "hatch-card-editor",
+        getEntitySuggestion: (hass, entityId) => {
+            if (typeof entityId !== "string") return null;
+            if (entityId.split(".")[0] !== "media_player") return null;
+            const platform = hass?.entities?.[entityId]?.platform || "";
+            if (!/hatch/i.test(platform)) return null;
+            return { config: { type: "custom:hatch-card", media_player_entity: entityId } };
+        },
     });
 }, 0);

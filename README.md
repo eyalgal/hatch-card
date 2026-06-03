@@ -22,6 +22,7 @@ A sleek, modern, and highly customizable Lovelace card to control your Hatch Res
 - **All-in-One Control:** Manage your device's light and sound from a single card.
 - **Sound-Only Mode:** The light entity is optional, so the card can be used as a dedicated media player controller.
 - **Sleep Timer Presets (v1.3.0+):** Start and cancel a Home Assistant `timer.*` helper from the card. Presets are available only when a timer helper is configured.
+- **Time Selector (v1.5.0+):** Set and edit a fixed time of day (wake-up, nap, bedtime) using an `input_datetime` helper, right from the card.
 - **Device-Specific Controls:** Native support for Toddler Lock, Clock Brightness, and Battery Level indicators (requires corresponding entities).
 - **Customizable Layouts & Controls:** Choose `vertical` or `horizontal` layouts and re-order controls to build your interface.
 - **Dynamic Backgrounds:** Set the card background to reflect the light's color, visually represent the volume level, or keep it standard.
@@ -83,6 +84,9 @@ or
 | `show_scenes`              | `boolean` | `false`             | Show the scene buttons in the expanded view.                                                   |
 | `show_toddler_lock`        | `boolean` | `false`             | Show the toddler-lock toggle (requires `toddler_lock_entity`).                                 |
 | `show_clock_brightness`    | `boolean` | `false`             | Show the clock-brightness slider (requires `clock_brightness_entity`).                         |
+| `show_time`                | `boolean` | `false`             | Show a time selector for an `input_datetime` helper (requires `time_entity`).                   |
+| `time_entity`              | `string`  | `null`              | Entity ID of an `input_datetime.*` helper (time-only). Required to enable the time selector.    |
+| `time_name`                | `string`  | Entity name         | Optional label shown next to the time selector.                                                |
 | `show_battery_indicator`   | `boolean` | `false`             | Show the battery indicator (requires `battery_level_entity`).                                  |
 | `toddler_lock_entity`      | `string`  | `null`              | Entity ID for the toddler-lock switch entity.                                                  |
 | `clock_brightness_entity`  | `string`  | `null`              | Entity ID for the clock-brightness light entity.                                               |
@@ -169,6 +173,54 @@ action:
       brightness_pct: 40
       color_name: green
       transition: 3
+```
+
+---
+
+## Time Selector (v1.5.0+)
+
+The time selector lets you set and edit a fixed time of day (for example a wake-up, nap, or bedtime time) directly from the card, using a Home Assistant `input_datetime` helper.
+
+### Setup
+1. Create an `input_datetime` helper with **time only**:
+   - Settings -> Devices & Services -> Helpers -> Create Helper -> Date/Time
+   - Enable **Time**, leave **Date** off.
+2. Add it to your card config:
+
+```yaml
+type: custom:hatch-card
+media_player_entity: media_player.rest_plus
+light_entity: light.rest_plus
+show_time: true
+time_entity: input_datetime.wake_up_time
+time_name: Wake-up Time
+```
+
+The card shows a time picker. Changing it calls `input_datetime.set_datetime` to update the helper.
+
+### Important
+The card only stores the time. It does not do anything when that time arrives.
+
+To act on the time, create an automation that triggers at the value of your `input_datetime` helper.
+
+### Example: turn the light green at the set time (if the device is playing)
+
+```yaml
+alias: Wake-up Time
+triggers:
+  - trigger: time
+    at: input_datetime.wake_up_time
+conditions:
+  - condition: state
+    entity_id: media_player.rest_plus
+    state: playing
+actions:
+  - target:
+      entity_id: light.rest_plus
+    data:
+      color_name: green
+    action: light.turn_on
+mode: single
 ```
 
 ---

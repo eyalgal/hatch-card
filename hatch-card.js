@@ -1609,6 +1609,7 @@ class HatchCard extends LitElement {
                 outline: none;
                 border-color: var(--primary-color);
             }
+            .slider-container {
                 position: relative;
                 flex: 1;
                 height: 40px;
@@ -1865,6 +1866,58 @@ class HatchCardEditor extends LitElement {
 
     setConfig(config) {
         this._config = { ...config };
+    }
+
+    firstUpdated() {
+        // In HA 2026.x the lazy-loaded editor components (ha-textfield /
+        // ha-input / ha-entity-picker / ha-icon-picker) may not be defined
+        // when this editor mounts, leaving un-upgraded empty elements. Force
+        // HA to load them, and re-render once whichever text input is defined.
+        const tags = ["ha-entity-picker", "ha-select", "ha-textfield", "ha-input", "ha-icon-picker", "ha-form", "mwc-list-item"];
+        tags.forEach((t) => { customElements.whenDefined(t).then(() => this.requestUpdate()).catch(() => {}); });
+        this._ensureHACommonsLoaded();
+        this.requestUpdate();
+    }
+
+    _ensureHACommonsLoaded() {
+        const needText = !customElements.get("ha-textfield") && !customElements.get("ha-input");
+        const needEntity = !customElements.get("ha-entity-picker");
+        const needIcon = !customElements.get("ha-icon-picker");
+        if (!needText && !needEntity && !needIcon) return;
+        try {
+            const loader = document.createElement("ha-form");
+            loader.style.display = "none";
+            loader.schema = [
+                { name: "_t", selector: { text: {} } },
+                { name: "_n", selector: { number: { min: 0, mode: "box" } } },
+                { name: "_e", selector: { entity: {} } },
+                { name: "_i", selector: { icon: {} } },
+            ];
+            loader.data = { _t: "", _n: 0, _e: "", _i: "" };
+            loader.hass = this.hass;
+            this.shadowRoot?.appendChild(loader);
+            setTimeout(() => { try { loader.remove(); } catch (_) {} }, 0);
+        } catch (_) {}
+    }
+
+    // Render a text/number input using ha-input on HA 2026.4+ (where
+    // ha-textfield is a compat shim that can render empty) and ha-textfield on
+    // older HA. lit-element 2.x has no static-html, so we branch on the tag.
+    _tf({ id = '', label = '', value = '', type = 'text', min = '', max = '', step = '', helper = '', placeholder = '', change } = {}) {
+        const handler = change || ((e) => this._valueChanged(e));
+        const v = value ?? '';
+        if (customElements.get("ha-input")) {
+            return html`<ha-input id="${id}" label="${label}" .value="${v}" type="${type}" min="${min}" max="${max}" step="${step}" helper="${helper}" placeholder="${placeholder}" @input="${handler}" @change="${handler}"></ha-input>`;
+        }
+        return html`<ha-textfield id="${id}" label="${label}" .value="${v}" type="${type}" min="${min}" max="${max}" step="${step}" helper="${helper}" placeholder="${placeholder}" @input="${handler}" @change="${handler}"></ha-textfield>`;
+    }
+
+    _renderSearchInput() {
+        const handler = (e) => { this._searchQuery = e.target.value || ''; };
+        if (customElements.get("ha-input")) {
+            return html`<ha-input class="editor-search" outlined label="Search settings" .value="${this._searchQuery || ''}" @input="${handler}"></ha-input>`;
+        }
+        return html`<ha-textfield class="editor-search" outlined label="Search settings" .value="${this._searchQuery || ''}" @input="${handler}"></ha-textfield>`;
     }
 
     updated() {
@@ -2170,14 +2223,8 @@ class HatchCardEditor extends LitElement {
                     <mwc-list-item value="volume">Volume Fill</mwc-list-item>
                 </ha-select>
             ` : ''}
-            <ha-textfield id="secondary_info" label="Secondary Info (Optional)" .value="${this._config?.secondary_info !== undefined ? this._config.secondary_info : 'Volume {volume}%'}" @input="${this._valueChanged}" helper="Use {volume}, {sound}, {brightness} as placeholders"></ha-textfield>
-            <ha-textfield
-                id="controls_order"
-                label="Expanded Controls Order (Optional)"
-                .value="${(this._config?.controls_order || ['brightness', 'clock_brightness', 'volume_slider', 'volume_presets', 'sound', 'scenes', 'timer', 'time', 'toddler_lock']).join(', ')}"
-                @input="${this._valueChanged}"
-                helper="Comma-separated list of control keys."
-            ></ha-textfield>
+            ${this._tf({ id: 'secondary_info', label: 'Secondary Info (Optional)', value: this._config?.secondary_info !== undefined ? this._config.secondary_info : 'Volume {volume}%', helper: 'Use {volume}, {sound}, {brightness} as placeholders' })}
+            ${this._tf({ id: 'controls_order', label: 'Expanded Controls Order (Optional)', value: (this._config?.controls_order || ['brightness', 'clock_brightness', 'volume_slider', 'volume_presets', 'sound', 'scenes', 'timer', 'time', 'toddler_lock']).join(', '), helper: 'Comma-separated list of control keys.' })}
         `;
 
         const controlsContent = html`
@@ -2225,9 +2272,9 @@ class HatchCardEditor extends LitElement {
             ${hasLight ? html`
                 <label class="switch-wrapper"><ha-switch id="volume_click_control" .checked="${this._config?.volume_click_control !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Volume Click Control</span><div class="switch-description">Click on card background to set volume</div></div></label>
             ` : ''}
-            <ha-textfield id="volume_presets" label="Volume Presets (Optional)" .value="${this._config?.volume_presets ? this._config.volume_presets.join(', ') : ''}" @input="${this._valueChanged}" helper="Comma-separated values (0.0-1.0): 0.2, 0.5, 0.8"></ha-textfield>
-            <ha-textfield id="volume_step" label="Volume Step" type="number" min="0.01" max="0.5" step="0.01" .value="${this._config?.volume_step || 0.01}" @input="${this._valueChanged}" helper="Volume change per button press"></ha-textfield>
-            <ha-textfield id="animation_duration" label="Animation Duration (ms)" type="number" min="0" max="1000" step="50" .value="${this._config?.animation_duration || 250}" @input="${this._valueChanged}"></ha-textfield>
+            ${this._tf({ id: 'volume_presets', label: 'Volume Presets (Optional)', value: this._config?.volume_presets ? this._config.volume_presets.join(', ') : '', helper: 'Comma-separated values (0.0-1.0): 0.2, 0.5, 0.8' })}
+            ${this._tf({ id: 'volume_step', label: 'Volume Step', type: 'number', min: '0.01', max: '0.5', step: '0.01', value: this._config?.volume_step || 0.01, helper: 'Volume change per button press' })}
+            ${this._tf({ id: 'animation_duration', label: 'Animation Duration (ms)', type: 'number', min: '0', max: '1000', step: '50', value: this._config?.animation_duration || 250 })}
         `;
 
         const timerContent = html`
@@ -2241,11 +2288,11 @@ class HatchCardEditor extends LitElement {
                     ></ha-form>
                 </div>
             ` : ''}
-            <ha-textfield id="timer_presets" label="Timer Presets (minutes)" .value="${this._config.timer_presets ? this._config.timer_presets.join(', ') : '15, 30, 60, 120'}" @input="${this._valueChanged}" helper="Comma-separated values in minutes"></ha-textfield>
+            ${this._tf({ id: 'timer_presets', label: 'Timer Presets (minutes)', value: this._config.timer_presets ? this._config.timer_presets.join(', ') : '15, 30, 60, 120', helper: 'Comma-separated values in minutes' })}
         `;
 
         const scenesContent = html`
-            <ha-textfield id="scenes_per_row" label="Scenes Per Row" type="number" min="1" max="8" .value="${this._config?.scenes_per_row || 4}" @input="${this._valueChanged}" helper="Number of scene buttons per row"></ha-textfield>
+            ${this._tf({ id: 'scenes_per_row', label: 'Scenes Per Row', type: 'number', min: '1', max: '8', value: this._config?.scenes_per_row || 4, helper: 'Number of scene buttons per row' })}
             <div class="subsection-title">Scenes</div>
             ${this._config?.scenes && this._config.scenes.length > 0 ? html`
                 <div class="scene-list">
@@ -2262,11 +2309,11 @@ class HatchCardEditor extends LitElement {
                             </div>
                             ${this._editingSceneIndex === index ? html`
                                 <div class="scene-edit">
-                                    <ha-textfield label="Name" .value="${scene.name || ''}" @input="${(e) => this._updateScene(e, index, 'name')}" placeholder="Scene name"></ha-textfield>
+                                    ${this._tf({ label: 'Name', value: scene.name || '', placeholder: 'Scene name', change: (e) => this._updateScene(e, index, 'name') })}
                                     <ha-icon-picker label="Icon" .value="${scene.icon || ''}" @value-changed="${(e) => this._updateScene(e, index, 'icon')}" .placeholder="${'mdi:palette'}"></ha-icon-picker>
                                     <div class="subsection-title">Option 1: Activate HA Scene</div>
                                     <ha-entity-picker .hass=${this.hass} .value=${scene.entity_id} @value-changed=${(e) => this._updateScene(e, index, 'entity_id')} label="Scene Entity (Optional)" .includeDomains=${["scene"]}></ha-entity-picker>
-                                    <ha-textfield label="Transition (seconds)" type="number" min="0" .value="${scene.transition ?? ''}" @input="${(e) => this._updateScene(e, index, 'transition')}"></ha-textfield>
+                                    ${this._tf({ label: 'Transition (seconds)', type: 'number', min: '0', value: scene.transition ?? '', change: (e) => this._updateScene(e, index, 'transition') })}
                                     <div class="subsection-title">Option 2: Manual Controls</div>
                                     <div class="manual-controls ${scene.entity_id ? 'disabled' : ''}">
                                         ${hasLight ? html`
@@ -2274,8 +2321,8 @@ class HatchCardEditor extends LitElement {
                                         ` : ''}
                                         <label class="switch-wrapper"><ha-switch .checked="${scene.turn_off_media === true}" @change="${(e) => this._updateScene(e, index, 'turn_off_media')}"></ha-switch><div class="switch-label"><span>Turn Off Media</span></div></label>
                                         ${hasLight ? html`
-                                            <ha-textfield label="Color" .value="${scene.color ? getColorNameFromRgb(scene.color) : ''}" @input="${(e) => this._updateScene(e, index, 'color')}" helper="Color name or RGB (255,255,255)"></ha-textfield>
-                                            <ha-textfield label="Brightness (%)" type="number" min="1" max="100" .value="${scene.brightness ?? ''}" @input="${(e) => this._updateScene(e, index, 'brightness')}"></ha-textfield>
+                                            ${this._tf({ label: 'Color', value: scene.color ? getColorNameFromRgb(scene.color) : '', helper: 'Color name or RGB (255,255,255)', change: (e) => this._updateScene(e, index, 'color') })}
+                                            ${this._tf({ label: 'Brightness (%)', type: 'number', min: '1', max: '100', value: scene.brightness ?? '', change: (e) => this._updateScene(e, index, 'brightness') })}
                                         ` : ''}
                                         ${baseSoundModes.length > 0 ? html`
                                             <ha-select label="Sound Mode" .value="${scene.sound_mode || ''}" .options=${[{value:'',label:''}, ...sceneSoundModes.map(m => ({value:m,label:m}))]} @selected="${(e) => this._updateScene(e, index, 'sound_mode')}" @change="${(e) => this._updateScene(e, index, 'sound_mode')}" @closed="${(e) => e.stopPropagation()}">
@@ -2283,7 +2330,7 @@ class HatchCardEditor extends LitElement {
                                                 ${sceneSoundModes.map(mode => html`<mwc-list-item .value="${mode}">${mode}</mwc-list-item>`)}
                                             </ha-select>
                                         ` : ''}
-                                        <ha-textfield label="Volume (%)" type="number" min="0" max="100" .value="${scene.volume ?? ''}" @input="${(e) => this._updateScene(e, index, 'volume')}"></ha-textfield>
+                                        ${this._tf({ label: 'Volume (%)', type: 'number', min: '0', max: '100', value: scene.volume ?? '', change: (e) => this._updateScene(e, index, 'volume') })}
                                     </div>
                                     <button class="done-button" @click="${() => this._editingSceneIndex = null}">Done</button>
                                 </div>
@@ -2297,13 +2344,7 @@ class HatchCardEditor extends LitElement {
 
         return html`
             <div class="editor-toolbar">
-                <ha-textfield
-                    class="editor-search"
-                    outlined
-                    label="Search settings"
-                    .value=${this._searchQuery || ''}
-                    @input=${(e) => { this._searchQuery = e.target.value || ''; }}
-                ></ha-textfield>
+                ${this._renderSearchInput()}
             </div>
             <div class="card-config">
                 ${panel('basic', 'Basic Configuration', 'mdi:tune', basicContent)}
@@ -2338,13 +2379,13 @@ class HatchCardEditor extends LitElement {
             .form-block { display: flex; flex-direction: column; gap: 16px; }
             @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
             .subsection-title { font-weight: 500; margin-top: 8px; margin-bottom: -8px; color: var(--primary-text-color); font-size: 0.9rem; }
-            ha-select, ha-textfield, ha-entity-picker, ha-icon-picker { width: 100%; }
+            ha-select, ha-textfield, ha-input, ha-entity-picker, ha-icon-picker { width: 100%; }
             .switches { display: flex; flex-direction: column; gap: 12px; }
             .switch-wrapper { display: flex; align-items: center; gap: 16px; cursor: pointer; padding: 4px 0; }
             .switch-label { display: flex; flex-direction: column; flex: 1; }
             .switch-label span:first-child { font-weight: 500; color: var(--primary-text-color); font-size: 14px; }
             .switch-description { font-size: 12px; color: var(--secondary-text-color); margin-top: 2px; line-height: 1.4; }
-            ha-textfield[type="number"] { width: 100%; }
+            ha-textfield[type="number"], ha-input[type="number"] { width: 100%; }
             .scene-list { display: flex; flex-direction: column; gap: 8px; }
             .scene-item { border: 1px solid var(--divider-color); border-radius: 8px; overflow: hidden; }
             .scene-summary { display: flex; align-items: center; gap: 12px; padding: 12px; cursor: pointer; background: rgba(var(--rgb-primary-text-color), 0.02); transition: background-color 0.1s; }

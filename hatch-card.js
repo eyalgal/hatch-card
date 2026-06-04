@@ -862,10 +862,21 @@ class HatchCard extends LitElement {
                     lang="${this._timeInputLang()}"
                     .value="${value}"
                     @change="${this._handleTimeChange}"
-                    @click="${(e) => e.stopPropagation()}"
+                    @click="${this._openTimePicker}"
                 />
             </div>
         `;
+    }
+
+    // The native time input only opens its picker from the (now hidden)
+    // indicator on desktop browsers; clicking the text just focuses it. Trigger
+    // the picker explicitly so the whole pill is tappable everywhere.
+    _openTimePicker(e) {
+        e.stopPropagation();
+        const input = e.currentTarget;
+        if (input && typeof input.showPicker === 'function') {
+            try { input.showPicker(); } catch (_) {}
+        }
     }
 
     // Derive the 12h/24h display for the native time input from Home

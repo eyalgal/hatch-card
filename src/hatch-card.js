@@ -1330,16 +1330,24 @@ class HatchCard extends LitElement {
         // When the expand button is used, controls are hidden by default and
         // should not influence the card's default size.
         if (c.show_expand_button) return 0;
+        // Mirror the live render visibility so the grid size matches the rows
+        // that are actually shown (e.g. brightness only renders when the light
+        // is on, unless show_brightness_when_off is set).
+        const lightState = c.light_entity ? this.hass?.states?.[c.light_entity] : null;
+        const hasLight = !!lightState;
+        const lightOn = hasLight && lightState.state === 'on';
+        const mediaState = c.media_player_entity ? this.hass?.states?.[c.media_player_entity] : null;
+        const soundModes = mediaState?.attributes?.sound_mode_list;
         const controls = Array.isArray(c.controls_order) ? c.controls_order : [];
         let rows = 0;
         for (const key of controls) {
             let enabled = false;
             switch (key) {
                 case 'brightness':
-                    enabled = !!c.show_brightness_control && !!c.light_entity;
+                    enabled = hasLight && !!c.show_brightness_control && (lightOn || !!c.show_brightness_when_off);
                     break;
                 case 'clock_brightness':
-                    enabled = !!c.show_clock_brightness && !!c.clock_brightness_entity;
+                    enabled = hasLight && !!c.show_clock_brightness && !!c.clock_brightness_entity;
                     break;
                 case 'volume_slider':
                     enabled = !!c.show_volume_slider;
@@ -1348,7 +1356,7 @@ class HatchCard extends LitElement {
                     enabled = Array.isArray(c.volume_presets) && c.volume_presets.length > 0;
                     break;
                 case 'sound':
-                    enabled = !!c.show_sound_control;
+                    enabled = !!c.show_sound_control && Array.isArray(soundModes) && soundModes.length > 0;
                     break;
                 case 'scenes':
                     enabled = !!c.show_scenes && Array.isArray(c.scenes) && c.scenes.length > 0;

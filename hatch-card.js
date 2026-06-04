@@ -7,10 +7,10 @@ import { LitElement, html, css } from 'https://unpkg.com/lit-element@2.0.1/lit-e
  *
  * Author: eyalgal
  * License: MIT
- * Version: 1.5.0
+ * Version: 1.5.1
  */
 
-const cardVersion = "1.5.0";
+const cardVersion = "1.5.1";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {
@@ -1622,20 +1622,24 @@ class HatchCard extends LitElement {
             }
             .time-control .time-input {
                 font-family: inherit;
-                font-size: 1rem;
+                font-size: 0.875rem;
                 height: 40px;
                 box-sizing: border-box;
                 color: var(--primary-text-color);
-                background: var(--secondary-background-color);
-                border: 1px solid var(--divider-color);
-                border-radius: 8px;
-                padding: 0 10px;
+                background-color: rgba(var(--rgb-primary-text-color), 0.05);
+                border: none;
+                border-radius: var(--ha-card-border-radius, 12px);
+                padding: 0 12px;
                 cursor: pointer;
                 color-scheme: light dark;
+                transition: background-color var(--animation-duration, 250ms);
+            }
+            .time-control .time-input:hover {
+                background-color: rgba(var(--rgb-primary-color), 0.12);
             }
             .time-control .time-input:focus {
                 outline: none;
-                border-color: var(--primary-color);
+                background-color: rgba(var(--rgb-primary-color), 0.12);
             }
             .slider-container {
                 position: relative;

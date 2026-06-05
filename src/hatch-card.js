@@ -5,7 +5,7 @@
  *
  * Author: eyalgal
  * License: MIT
- * Version: 1.5.1
+ * Version: 1.5.2
  */
 import {
     LitElement,
@@ -13,7 +13,7 @@ import {
     css
 } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
 
-const cardVersion = "1.5.1";
+const cardVersion = "1.5.2";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {
@@ -380,7 +380,8 @@ class HatchCard extends LitElement {
             secondaryInfo = this._timerRemaining;
         }
 
-        const layoutClass = this._config.layout === 'horizontal' ? 'horizontal-layout' : 'vertical-layout';
+        const isVertical = this._config.layout === 'vertical';
+        const layoutClass = isVertical ? 'vertical-layout' : 'horizontal-layout';
         const expandedClass = this._showControls ? 'expanded' : '';
 
         const hasExpandableControls = (this._config.controls_order || []).some(key => {
@@ -409,9 +410,9 @@ class HatchCard extends LitElement {
                 @click="${this._handleCardClick}"
             >
                 <div class="grid">                
-                ${this._config.layout === 'horizontal' 
-                    ? this._renderHorizontalLayout(isOn, lightColor, secondaryInfo, activeIcon, volumePercent, name, showExpandButton)
-                    : this._renderVerticalLayout(isOn, lightColor, secondaryInfo, activeIcon, volumePercent, name, showExpandButton)
+                ${isVertical
+                    ? this._renderVerticalLayout(isOn, lightColor, secondaryInfo, activeIcon, volumePercent, name, showExpandButton)
+                    : this._renderHorizontalLayout(isOn, lightColor, secondaryInfo, activeIcon, volumePercent, name, showExpandButton)
                 }
                 ${showExpandedControls ? this._renderExpandedControls(isOn, lightColor, brightness, volumeLevel, mediaState, hasLight) : ''}
                 </div>      
@@ -1393,8 +1394,21 @@ class HatchCard extends LitElement {
     }
 
     getLayoutOptions() {
+        const isVertical = this._config?.layout === 'vertical';
+        // With the expand button the controls are hidden until the user expands
+        // the card, so its height changes at runtime. Report an auto row count
+        // (matching `grid_options: rows: auto`) so the Sections grid measures the
+        // actual collapsed height and re-measures on expand instead of pinning a
+        // fixed cell that the expanded panel overflows onto the tiles below.
+        if (this._config?.show_expand_button) {
+            return {
+                grid_rows: 'auto',
+                grid_columns: isVertical ? 2 : 4,
+                grid_min_columns: 2,
+            };
+        }
         const extra = this._countAlwaysVisibleControlRows();
-        if (this._config?.layout === 'vertical') {
+        if (isVertical) {
             return {
                 grid_rows: 3 + extra,
                 grid_min_rows: 3,

@@ -1401,9 +1401,12 @@ class HatchCard extends LitElement {
         // actual collapsed height and re-measures on expand instead of pinning a
         // fixed cell that the expanded panel overflows onto the tiles below.
         if (this._config?.show_expand_button) {
+            // Default the expandable card to full section width. HA overrides
+            // this with any user-set `grid_options`, so an explicit columns value
+            // still wins; this only changes the default when the grid is unset.
             return {
                 grid_rows: 'auto',
-                grid_columns: isVertical ? 2 : 4,
+                grid_columns: 4,
                 grid_min_columns: 2,
             };
         }

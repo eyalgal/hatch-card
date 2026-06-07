@@ -5,7 +5,7 @@
  *
  * Author: eyalgal
  * License: MIT
- * Version: 1.5.2
+ * Version: 1.5.3
  */
 import {
     LitElement,
@@ -13,7 +13,7 @@ import {
     css
 } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
 
-const cardVersion = "1.5.2";
+const cardVersion = "1.5.3";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {
@@ -450,8 +450,15 @@ class HatchCard extends LitElement {
                         ${this._renderVolumeButton(Math.abs(this._config.volume_step), 'mdi:volume-plus', lightColor)}
                     ` : ''}
                     ${showExpandButton ? html`
-                        <div class="expand-button" @click="${this._toggleControls}">
-                            <ha-icon icon="${this._showControls ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
+                        <div class="expand-button"
+                            role="button"
+                            tabindex="0"
+                            aria-expanded="${this._showControls ? 'true' : 'false'}"
+                            aria-label="${this._showControls ? 'Collapse controls' : 'Expand controls'}"
+                            @click="${this._toggleControls}"
+                            @keydown="${this._handleExpandKeydown}"
+                        >
+                            <ha-icon class="expand-icon ${this._showControls ? 'expanded' : ''}" icon="mdi:chevron-down"></ha-icon>
                         </div>
                     ` : ''}
                 </div>
@@ -483,8 +490,15 @@ class HatchCard extends LitElement {
                 </div>
                 ${this._config.show_battery_indicator ? this._renderBatteryIndicator(true) : ''}
                 ${showExpandButton ? html`
-                    <div class="expand-button vertical" @click="${this._toggleControls}">
-                        <ha-icon icon="${this._showControls ? 'mdi:chevron-up' : 'mdi:chevron-down'}"></ha-icon>
+                    <div class="expand-button vertical"
+                        role="button"
+                        tabindex="0"
+                        aria-expanded="${this._showControls ? 'true' : 'false'}"
+                        aria-label="${this._showControls ? 'Collapse controls' : 'Expand controls'}"
+                        @click="${this._toggleControls}"
+                        @keydown="${this._handleExpandKeydown}"
+                    >
+                        <ha-icon class="expand-icon ${this._showControls ? 'expanded' : ''}" icon="mdi:chevron-down"></ha-icon>
                     </div>
                 ` : ''}
             </div>
@@ -1157,6 +1171,13 @@ class HatchCard extends LitElement {
         this._showControls = !this._showControls;
     }
 
+    _handleExpandKeydown(e) {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+            e.preventDefault();
+            this._toggleControls(e);
+        }
+    }
+
     _handleVolumeChange(change) {
         const currentVolume = this.hass.states[this._config.media_player_entity].attributes.volume_level || 0;
         const volumeChange = parseFloat(change) || 0;
@@ -1586,6 +1607,15 @@ class HatchCard extends LitElement {
                 transition: transform var(--animation-duration, 250ms);
             }
             .expand-button:hover { color: var(--primary-text-color); }
+            .expand-button:focus-visible {
+                outline: 2px solid var(--primary-color);
+                outline-offset: 2px;
+            }
+            .expand-icon {
+                display: flex;
+                transition: transform var(--animation-duration, 250ms) ease-in-out;
+            }
+            .expand-icon.expanded { transform: rotate(180deg); }
             .expanded-controls {
                 margin-top: 8px;
                 padding: 0;

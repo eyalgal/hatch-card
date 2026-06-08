@@ -1702,11 +1702,19 @@ class HatchCard extends LitElement {
                 text-align: center;
                 cursor: pointer;
                 color-scheme: light dark;
+                -webkit-appearance: none;
+                appearance: none;
                 transition: background-color var(--animation-duration, 250ms);
             }
             .time-control .time-input::-webkit-calendar-picker-indicator {
                 display: none;
                 -webkit-appearance: none;
+                appearance: none;
+                opacity: 0;
+                width: 0;
+                height: 0;
+                padding: 0;
+                margin: 0;
             }
             .time-control .time-input::-webkit-inner-spin-button,
             .time-control .time-input::-webkit-clear-button {

@@ -1303,6 +1303,10 @@ class HatchCard extends LitElement {
         this._vibrate();
         if (scene.entity_id) {
             const serviceData = { entity_id: scene.entity_id };
+            if (scene.entity_id.startsWith("script.")) {
+                this.hass.callService("script", "turn_on", serviceData);
+                return;
+            }
             if (scene.transition !== undefined && scene.transition !== null) {
                 serviceData.transition = scene.transition;
             }
@@ -2428,7 +2432,7 @@ class HatchCardEditor extends LitElement {
                                     ${this._tf({ label: 'Name', value: scene.name || '', placeholder: 'Scene name', change: (e) => this._updateScene(e, index, 'name') })}
                                     <ha-icon-picker label="Icon" .value="${scene.icon || ''}" @value-changed="${(e) => this._updateScene(e, index, 'icon')}" .placeholder="${'mdi:palette'}"></ha-icon-picker>
                                     <div class="subsection-title">Option 1: Activate HA Scene</div>
-                                    <ha-entity-picker .hass=${this.hass} .value=${scene.entity_id} @value-changed=${(e) => this._updateScene(e, index, 'entity_id')} label="Scene Entity (Optional)" .includeDomains=${["scene"]}></ha-entity-picker>
+                                    <ha-entity-picker .hass=${this.hass} .value=${scene.entity_id} @value-changed=${(e) => this._updateScene(e, index, 'entity_id')} label="Scene or Script Entity (Optional)" .includeDomains=${["scene", "script"]}></ha-entity-picker>
                                     ${this._tf({ label: 'Transition (seconds)', type: 'number', min: '0', value: scene.transition ?? '', change: (e) => this._updateScene(e, index, 'transition') })}
                                     <div class="subsection-title">Option 2: Manual Controls</div>
                                     <div class="manual-controls ${scene.entity_id ? 'disabled' : ''}">

@@ -233,8 +233,8 @@ The `scenes` option takes a list of scene objects. Each object can define its ow
 | :--------------- | :-------- | :----------------------------------------------------------------------------------------------- |
 | `name`           | `string`  | **Required.** The name displayed on the scene button.                                            |
 | `icon`           | `string`  | An icon for the scene button (example: `mdi:weather-night`).                                     |
-| `entity_id`      | `string`  | The entity ID of a Home Assistant scene. If used, it overrides all other manual settings below. |
-| `transition`     | `number`  | Transition time (seconds) for the scene.                                                         |
+| `entity_id`      | `string`  | The entity ID of a Home Assistant scene (`scene.*`) or script (`script.*`). If used, it overrides all other manual settings below. |
+| `transition`     | `number`  | Transition time (seconds) for the scene. Not applied to scripts.                                 |
 | `turn_off_light` | `boolean` | Set to `true` to turn the light off.                                                             |
 | `turn_off_media` | `boolean` | Set to `true` to turn the media player off.                                                      |
 | `color`          | `string`  | Set the light color by name (`'red'`) or RGB (`'255,0,0'`).                                      |

@@ -2434,9 +2434,9 @@ class HatchCardEditor extends LitElement {
                                 <div class="scene-edit">
                                     ${this._tf({ label: 'Name', value: scene.name || '', placeholder: 'Scene name', change: (e) => this._updateScene(e, index, 'name') })}
                                     <ha-icon-picker label="Icon" .value="${scene.icon || ''}" @value-changed="${(e) => this._updateScene(e, index, 'icon')}" .placeholder="${'mdi:palette'}"></ha-icon-picker>
-                                    <div class="subsection-title">Option 1: Activate HA Scene</div>
+                                    <div class="subsection-title">Option 1: Activate HA Scene or Script</div>
                                     <ha-entity-picker .hass=${this.hass} .value=${scene.entity_id} @value-changed=${(e) => this._updateScene(e, index, 'entity_id')} label="Scene or Script Entity (Optional)" .includeDomains=${["scene", "script"]}></ha-entity-picker>
-                                    ${this._tf({ label: 'Transition (seconds)', type: 'number', min: '0', value: scene.transition ?? '', change: (e) => this._updateScene(e, index, 'transition') })}
+                                    ${scene.entity_id?.startsWith('script.') ? '' : this._tf({ label: 'Transition (seconds)', type: 'number', min: '0', value: scene.transition ?? '', change: (e) => this._updateScene(e, index, 'transition') })}
                                     <div class="subsection-title">Option 2: Manual Controls</div>
                                     <div class="manual-controls ${scene.entity_id ? 'disabled' : ''}">
                                         ${hasLight ? html`

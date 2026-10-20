@@ -5,11 +5,11 @@
  *
  * Author: eyalgal
  * License: MIT
- * Version: 1.5.3
+ * Version: 1.6.0
  */
 import { LitElement, html, css } from "lit";
 
-const cardVersion = "1.5.3";
+const cardVersion = "1.6.0";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
 
 const SOUND_ICON_MAP = {

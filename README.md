@@ -370,7 +370,7 @@ hold_action:
 
 The icon is keyboard accessible: focus it with <kbd>Tab</kbd> and press <kbd>Enter</kbd> or <kbd>Space</kbd> to run the `tap_action`.
 
-## Theming
+## Theming (v1.6.0+)
 
 Controls (sliders, buttons, sound selector, time picker, toddler lock) follow your Home Assistant theme the same way the built-in tile card features do. They use these standard theme variables:
 

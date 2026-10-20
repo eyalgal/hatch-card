@@ -1,4 +1,28 @@
-import { LitElement, html, css } from 'https://unpkg.com/lit-element@2.0.1/lit-element.js?module';
+/**
+ * @license
+ * Copyright 2019 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+const t$1=globalThis,e$2=t$1.ShadowRoot&&(void 0===t$1.ShadyCSS||t$1.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,s$2=Symbol(),o$3=new WeakMap;let n$2 = class n{constructor(t,e,o){if(this._$cssResult$=true,o!==s$2)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=t,this.t=e;}get styleSheet(){let t=this.o;const s=this.t;if(e$2&&void 0===t){const e=void 0!==s&&1===s.length;e&&(t=o$3.get(s)),void 0===t&&((this.o=t=new CSSStyleSheet).replaceSync(this.cssText),e&&o$3.set(s,t));}return t}toString(){return this.cssText}};const r$2=t=>new n$2("string"==typeof t?t:t+"",void 0,s$2),i$3=(t,...e)=>{const o=1===t.length?t[0]:e.reduce((e,s,o)=>e+(t=>{if(true===t._$cssResult$)return t.cssText;if("number"==typeof t)return t;throw Error("Value passed to 'css' function must be a 'css' function result: "+t+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(s)+t[o+1],t[0]);return new n$2(o,t,s$2)},S$1=(s,o)=>{if(e$2)s.adoptedStyleSheets=o.map(t=>t instanceof CSSStyleSheet?t:t.styleSheet);else for(const e of o){const o=document.createElement("style"),n=t$1.litNonce;void 0!==n&&o.setAttribute("nonce",n),o.textContent=e.cssText,s.appendChild(o);}},c$2=e$2?t=>t:t=>t instanceof CSSStyleSheet?(t=>{let e="";for(const s of t.cssRules)e+=s.cssText;return r$2(e)})(t):t;
+
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */const{is:i$2,defineProperty:e$1,getOwnPropertyDescriptor:h$1,getOwnPropertyNames:r$1,getOwnPropertySymbols:o$2,getPrototypeOf:n$1}=Object,a$1=globalThis,c$1=a$1.trustedTypes,l$1=c$1?c$1.emptyScript:"",p$1=a$1.reactiveElementPolyfillSupport,d$1=(t,s)=>t,u$1={toAttribute(t,s){switch(s){case Boolean:t=t?l$1:null;break;case Object:case Array:t=null==t?t:JSON.stringify(t);}return t},fromAttribute(t,s){let i=t;switch(s){case Boolean:i=null!==t;break;case Number:i=null===t?null:Number(t);break;case Object:case Array:try{i=JSON.parse(t);}catch(t){i=null;}}return i}},f$1=(t,s)=>!i$2(t,s),b$1={attribute:true,type:String,converter:u$1,reflect:false,useDefault:false,hasChanged:f$1};Symbol.metadata??=Symbol("metadata"),a$1.litPropertyMetadata??=new WeakMap;let y$1 = class y extends HTMLElement{static addInitializer(t){this._$Ei(),(this.l??=[]).push(t);}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(t,s=b$1){if(s.state&&(s.attribute=false),this._$Ei(),this.prototype.hasOwnProperty(t)&&((s=Object.create(s)).wrapped=true),this.elementProperties.set(t,s),!s.noAccessor){const i=Symbol(),h=this.getPropertyDescriptor(t,i,s);void 0!==h&&e$1(this.prototype,t,h);}}static getPropertyDescriptor(t,s,i){const{get:e,set:r}=h$1(this.prototype,t)??{get(){return this[s]},set(t){this[s]=t;}};return {get:e,set(s){const h=e?.call(this);r?.call(this,s),this.requestUpdate(t,h,i);},configurable:true,enumerable:true}}static getPropertyOptions(t){return this.elementProperties.get(t)??b$1}static _$Ei(){if(this.hasOwnProperty(d$1("elementProperties")))return;const t=n$1(this);t.finalize(),void 0!==t.l&&(this.l=[...t.l]),this.elementProperties=new Map(t.elementProperties);}static finalize(){if(this.hasOwnProperty(d$1("finalized")))return;if(this.finalized=true,this._$Ei(),this.hasOwnProperty(d$1("properties"))){const t=this.properties,s=[...r$1(t),...o$2(t)];for(const i of s)this.createProperty(i,t[i]);}const t=this[Symbol.metadata];if(null!==t){const s=litPropertyMetadata.get(t);if(void 0!==s)for(const[t,i]of s)this.elementProperties.set(t,i);}this._$Eh=new Map;for(const[t,s]of this.elementProperties){const i=this._$Eu(t,s);void 0!==i&&this._$Eh.set(i,t);}this.elementStyles=this.finalizeStyles(this.styles);}static finalizeStyles(s){const i=[];if(Array.isArray(s)){const e=new Set(s.flat(1/0).reverse());for(const s of e)i.unshift(c$2(s));}else void 0!==s&&i.push(c$2(s));return i}static _$Eu(t,s){const i=s.attribute;return  false===i?void 0:"string"==typeof i?i:"string"==typeof t?t.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=false,this.hasUpdated=false,this._$Em=null,this._$Ev();}_$Ev(){this._$ES=new Promise(t=>this.enableUpdating=t),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(t=>t(this));}addController(t){(this._$EO??=new Set).add(t),void 0!==this.renderRoot&&this.isConnected&&t.hostConnected?.();}removeController(t){this._$EO?.delete(t);}_$E_(){const t=new Map,s=this.constructor.elementProperties;for(const i of s.keys())this.hasOwnProperty(i)&&(t.set(i,this[i]),delete this[i]);t.size>0&&(this._$Ep=t);}createRenderRoot(){const t=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return S$1(t,this.constructor.elementStyles),t}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(true),this._$EO?.forEach(t=>t.hostConnected?.());}enableUpdating(t){}disconnectedCallback(){this._$EO?.forEach(t=>t.hostDisconnected?.());}attributeChangedCallback(t,s,i){this._$AK(t,i);}_$ET(t,s){const i=this.constructor.elementProperties.get(t),e=this.constructor._$Eu(t,i);if(void 0!==e&&true===i.reflect){const h=(void 0!==i.converter?.toAttribute?i.converter:u$1).toAttribute(s,i.type);this._$Em=t,null==h?this.removeAttribute(e):this.setAttribute(e,h),this._$Em=null;}}_$AK(t,s){const i=this.constructor,e=i._$Eh.get(t);if(void 0!==e&&this._$Em!==e){const t=i.getPropertyOptions(e),h="function"==typeof t.converter?{fromAttribute:t.converter}:void 0!==t.converter?.fromAttribute?t.converter:u$1;this._$Em=e;const r=h.fromAttribute(s,t.type);this[e]=r??this._$Ej?.get(e)??r,this._$Em=null;}}requestUpdate(t,s,i,e=false,h){if(void 0!==t){const r=this.constructor;if(false===e&&(h=this[t]),i??=r.getPropertyOptions(t),!((i.hasChanged??f$1)(h,s)||i.useDefault&&i.reflect&&h===this._$Ej?.get(t)&&!this.hasAttribute(r._$Eu(t,i))))return;this.C(t,s,i);} false===this.isUpdatePending&&(this._$ES=this._$EP());}C(t,s,{useDefault:i,reflect:e,wrapped:h},r){i&&!(this._$Ej??=new Map).has(t)&&(this._$Ej.set(t,r??s??this[t]),true!==h||void 0!==r)||(this._$AL.has(t)||(this.hasUpdated||i||(s=void 0),this._$AL.set(t,s)),true===e&&this._$Em!==t&&(this._$Eq??=new Set).add(t));}async _$EP(){this.isUpdatePending=true;try{await this._$ES;}catch(t){Promise.reject(t);}const t=this.scheduleUpdate();return null!=t&&await t,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(const[t,s]of this._$Ep)this[t]=s;this._$Ep=void 0;}const t=this.constructor.elementProperties;if(t.size>0)for(const[s,i]of t){const{wrapped:t}=i,e=this[s];true!==t||this._$AL.has(s)||void 0===e||this.C(s,void 0,i,e);}}let t=false;const s=this._$AL;try{t=this.shouldUpdate(s),t?(this.willUpdate(s),this._$EO?.forEach(t=>t.hostUpdate?.()),this.update(s)):this._$EM();}catch(s){throw t=false,this._$EM(),s}t&&this._$AE(s);}willUpdate(t){}_$AE(t){this._$EO?.forEach(t=>t.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=true,this.firstUpdated(t)),this.updated(t);}_$EM(){this._$AL=new Map,this.isUpdatePending=false;}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(t){return  true}update(t){this._$Eq&&=this._$Eq.forEach(t=>this._$ET(t,this[t])),this._$EM();}updated(t){}firstUpdated(t){}};y$1.elementStyles=[],y$1.shadowRootOptions={mode:"open"},y$1[d$1("elementProperties")]=new Map,y$1[d$1("finalized")]=new Map,p$1?.({ReactiveElement:y$1}),(a$1.reactiveElementVersions??=[]).push("2.1.2");
+
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+const t=globalThis,i$1=t=>t,s$1=t.trustedTypes,e=s$1?s$1.createPolicy("lit-html",{createHTML:t=>t}):void 0,h="$lit$",o$1=`lit$${Math.random().toFixed(9).slice(2)}$`,n="?"+o$1,r=`<${n}>`,l=document,c=()=>l.createComment(""),a=t=>null===t||"object"!=typeof t&&"function"!=typeof t,u=Array.isArray,d=t=>u(t)||"function"==typeof t?.[Symbol.iterator],f="[ \t\n\f\r]",v=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,_=/-->/g,m=/>/g,p=RegExp(`>|${f}(?:([^\\s"'>=/]+)(${f}*=${f}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`,"g"),g=/'/g,$=/"/g,y=/^(?:script|style|textarea|title)$/i,x=t=>(i,...s)=>({_$litType$:t,strings:i,values:s}),b=x(1),E=Symbol.for("lit-noChange"),A=Symbol.for("lit-nothing"),C=new WeakMap,P=l.createTreeWalker(l,129);function V(t,i){if(!u(t)||!t.hasOwnProperty("raw"))throw Error("invalid template strings array");return void 0!==e?e.createHTML(i):i}const N=(t,i)=>{const s=t.length-1,e=[];let n,l=2===i?"<svg>":3===i?"<math>":"",c=v;for(let i=0;i<s;i++){const s=t[i];let a,u,d=-1,f=0;for(;f<s.length&&(c.lastIndex=f,u=c.exec(s),null!==u);)f=c.lastIndex,c===v?"!--"===u[1]?c=_:void 0!==u[1]?c=m:void 0!==u[2]?(y.test(u[2])&&(n=RegExp("</"+u[2],"g")),c=p):void 0!==u[3]&&(c=p):c===p?">"===u[0]?(c=n??v,d=-1):void 0===u[1]?d=-2:(d=c.lastIndex-u[2].length,a=u[1],c=void 0===u[3]?p:'"'===u[3]?$:g):c===$||c===g?c=p:c===_||c===m?c=v:(c=p,n=void 0);const x=c===p&&t[i+1].startsWith("/>")?" ":"";l+=c===v?s+r:d>=0?(e.push(a),s.slice(0,d)+h+s.slice(d)+o$1+x):s+o$1+(-2===d?i:x);}return [V(t,l+(t[s]||"<?>")+(2===i?"</svg>":3===i?"</math>":"")),e]};class S{constructor({strings:t,_$litType$:i},e){let r;this.parts=[];let l=0,a=0;const u=t.length-1,d=this.parts,[f,v]=N(t,i);if(this.el=S.createElement(f,e),P.currentNode=this.el.content,2===i||3===i){const t=this.el.content.firstChild;t.replaceWith(...t.childNodes);}for(;null!==(r=P.nextNode())&&d.length<u;){if(1===r.nodeType){if(r.hasAttributes())for(const t of r.getAttributeNames())if(t.endsWith(h)){const i=v[a++],s=r.getAttribute(t).split(o$1),e=/([.?@])?(.*)/.exec(i);d.push({type:1,index:l,name:e[2],strings:s,ctor:"."===e[1]?I:"?"===e[1]?L:"@"===e[1]?z:H}),r.removeAttribute(t);}else t.startsWith(o$1)&&(d.push({type:6,index:l}),r.removeAttribute(t));if(y.test(r.tagName)){const t=r.textContent.split(o$1),i=t.length-1;if(i>0){r.textContent=s$1?s$1.emptyScript:"";for(let s=0;s<i;s++)r.append(t[s],c()),P.nextNode(),d.push({type:2,index:++l});r.append(t[i],c());}}}else if(8===r.nodeType)if(r.data===n)d.push({type:2,index:l});else {let t=-1;for(;-1!==(t=r.data.indexOf(o$1,t+1));)d.push({type:7,index:l}),t+=o$1.length-1;}l++;}}static createElement(t,i){const s=l.createElement("template");return s.innerHTML=t,s}}function M(t,i,s=t,e){if(i===E)return i;let h=void 0!==e?s._$Co?.[e]:s._$Cl;const o=a(i)?void 0:i._$litDirective$;return h?.constructor!==o&&(h?._$AO?.(false),void 0===o?h=void 0:(h=new o(t),h._$AT(t,s,e)),void 0!==e?(s._$Co??=[])[e]=h:s._$Cl=h),void 0!==h&&(i=M(t,h._$AS(t,i.values),h,e)),i}class R{constructor(t,i){this._$AV=[],this._$AN=void 0,this._$AD=t,this._$AM=i;}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(t){const{el:{content:i},parts:s}=this._$AD,e=(t?.creationScope??l).importNode(i,true);P.currentNode=e;let h=P.nextNode(),o=0,n=0,r=s[0];for(;void 0!==r;){if(o===r.index){let i;2===r.type?i=new k(h,h.nextSibling,this,t):1===r.type?i=new r.ctor(h,r.name,r.strings,this,t):6===r.type&&(i=new Z(h,this,t)),this._$AV.push(i),r=s[++n];}o!==r?.index&&(h=P.nextNode(),o++);}return P.currentNode=l,e}p(t){let i=0;for(const s of this._$AV) void 0!==s&&(void 0!==s.strings?(s._$AI(t,s,i),i+=s.strings.length-2):s._$AI(t[i])),i++;}}class k{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(t,i,s,e){this.type=2,this._$AH=A,this._$AN=void 0,this._$AA=t,this._$AB=i,this._$AM=s,this.options=e,this._$Cv=e?.isConnected??true;}get parentNode(){let t=this._$AA.parentNode;const i=this._$AM;return void 0!==i&&11===t?.nodeType&&(t=i.parentNode),t}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(t,i=this){t=M(this,t,i),a(t)?t===A||null==t||""===t?(this._$AH!==A&&this._$AR(),this._$AH=A):t!==this._$AH&&t!==E&&this._(t):void 0!==t._$litType$?this.$(t):void 0!==t.nodeType?this.T(t):d(t)?this.k(t):this._(t);}O(t){return this._$AA.parentNode.insertBefore(t,this._$AB)}T(t){this._$AH!==t&&(this._$AR(),this._$AH=this.O(t));}_(t){this._$AH!==A&&a(this._$AH)?this._$AA.nextSibling.data=t:this.T(l.createTextNode(t)),this._$AH=t;}$(t){const{values:i,_$litType$:s}=t,e="number"==typeof s?this._$AC(t):(void 0===s.el&&(s.el=S.createElement(V(s.h,s.h[0]),this.options)),s);if(this._$AH?._$AD===e)this._$AH.p(i);else {const t=new R(e,this),s=t.u(this.options);t.p(i),this.T(s),this._$AH=t;}}_$AC(t){let i=C.get(t.strings);return void 0===i&&C.set(t.strings,i=new S(t)),i}k(t){u(this._$AH)||(this._$AH=[],this._$AR());const i=this._$AH;let s,e=0;for(const h of t)e===i.length?i.push(s=new k(this.O(c()),this.O(c()),this,this.options)):s=i[e],s._$AI(h),e++;e<i.length&&(this._$AR(s&&s._$AB.nextSibling,e),i.length=e);}_$AR(t=this._$AA.nextSibling,s){for(this._$AP?.(false,true,s);t!==this._$AB;){const s=i$1(t).nextSibling;i$1(t).remove(),t=s;}}setConnected(t){ void 0===this._$AM&&(this._$Cv=t,this._$AP?.(t));}}class H{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(t,i,s,e,h){this.type=1,this._$AH=A,this._$AN=void 0,this.element=t,this.name=i,this._$AM=e,this.options=h,s.length>2||""!==s[0]||""!==s[1]?(this._$AH=Array(s.length-1).fill(new String),this.strings=s):this._$AH=A;}_$AI(t,i=this,s,e){const h=this.strings;let o=false;if(void 0===h)t=M(this,t,i,0),o=!a(t)||t!==this._$AH&&t!==E,o&&(this._$AH=t);else {const e=t;let n,r;for(t=h[0],n=0;n<h.length-1;n++)r=M(this,e[s+n],i,n),r===E&&(r=this._$AH[n]),o||=!a(r)||r!==this._$AH[n],r===A?t=A:t!==A&&(t+=(r??"")+h[n+1]),this._$AH[n]=r;}o&&!e&&this.j(t);}j(t){t===A?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,t??"");}}class I extends H{constructor(){super(...arguments),this.type=3;}j(t){this.element[this.name]=t===A?void 0:t;}}class L extends H{constructor(){super(...arguments),this.type=4;}j(t){this.element.toggleAttribute(this.name,!!t&&t!==A);}}class z extends H{constructor(t,i,s,e,h){super(t,i,s,e,h),this.type=5;}_$AI(t,i=this){if((t=M(this,t,i,0)??A)===E)return;const s=this._$AH,e=t===A&&s!==A||t.capture!==s.capture||t.once!==s.once||t.passive!==s.passive,h=t!==A&&(s===A||e);e&&this.element.removeEventListener(this.name,this,s),h&&this.element.addEventListener(this.name,this,t),this._$AH=t;}handleEvent(t){"function"==typeof this._$AH?this._$AH.call(this.options?.host??this.element,t):this._$AH.handleEvent(t);}}class Z{constructor(t,i,s){this.element=t,this.type=6,this._$AN=void 0,this._$AM=i,this.options=s;}get _$AU(){return this._$AM._$AU}_$AI(t){M(this,t);}}const B=t.litHtmlPolyfillSupport;B?.(S,k),(t.litHtmlVersions??=[]).push("3.3.3");const D=(t,i,s)=>{const e=s?.renderBefore??i;let h=e._$litPart$;if(void 0===h){const t=s?.renderBefore??null;e._$litPart$=h=new k(i.insertBefore(c(),t),t,void 0,s??{});}return h._$AI(t),h};
+
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */const s=globalThis;class i extends y$1{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0;}createRenderRoot(){const t=super.createRenderRoot();return this.renderOptions.renderBefore??=t.firstChild,t}update(t){const r=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(t),this._$Do=D(r,this.renderRoot,this.renderOptions);}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(true);}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(false);}render(){return E}}i._$litElement$=true,i["finalized"]=true,s.litElementHydrateSupport?.({LitElement:i});const o=s.litElementPolyfillSupport;o?.({LitElement:i});(s.litElementVersions??=[]).push("4.2.2");
 
 /*
  * Hatch Card
@@ -125,7 +149,7 @@ function parseColorInput(input) {
     return null;
 }
 
-class HatchCard extends LitElement {
+class HatchCard extends i {
     static get properties() {
         return {
             hass: {},
@@ -307,10 +331,10 @@ class HatchCard extends LitElement {
     }
 
     render() {
-        if (!this.hass || !this._config) return html``;
+        if (!this.hass || !this._config) return b``;
 
         if (!this._config.media_player_entity) {
-            return html`
+            return b`
                 <ha-card>
                     <div class="grid">                
                         <div style="padding: 16px; text-align: center; color: var(--secondary-text-color);">
@@ -411,7 +435,7 @@ class HatchCard extends LitElement {
         const showExpandedControls = showExpandButton ? this._showControls : hasExpandableControls;
         const hasExpandButtonClass = showExpandButton ? 'has-expand-button' : '';
 
-        return html`
+        return b`
             <ha-card 
                 style="${cardStyle}" 
                 class="${layoutClass} ${expandedClass} ${hasExpandButtonClass}"
@@ -429,7 +453,7 @@ class HatchCard extends LitElement {
     }
 
     _renderHorizontalLayout(isOn, lightColor, secondaryInfo, activeIcon, volumePercent, name, showExpandButton) {
-        return html`
+        return b`
             <div class="content-wrapper">
                 <div class="header">
                     <div class="icon-container"
@@ -438,25 +462,26 @@ class HatchCard extends LitElement {
                         @pointerup="${this._handlePressEnd}"
                         @pointercancel="${this._cancelPress}"
                         @click="${(e) => e.stopPropagation()}"
+                        @keydown="${this._handleIconKeydown}"
                         role="button"
                         tabindex="0"
-                        aria-label="Toggle"
+                        aria-label="${name}"
                     >
                         ${this._renderIconOrPhoto(isOn, lightColor, activeIcon)}
                     </div>
                     <div class="info">
                         <div class="name">${name}</div>
-                        ${secondaryInfo ? html`<div class="secondary-info">${secondaryInfo}</div>` : ''}
+                        ${secondaryInfo ? b`<div class="secondary-info">${secondaryInfo}</div>` : ''}
                     </div>
                 </div>
                 <div class="actions">
                     ${this._config.show_battery_indicator ? this._renderBatteryIndicator() : ''}
-                    ${this._config.show_volume_buttons ? html`
+                    ${this._config.show_volume_buttons ? b`
                         ${this._renderVolumeButton(-Math.abs(this._config.volume_step), 'mdi:volume-minus', lightColor)}
                         <div class="volume-percent">${volumePercent}%</div>
                         ${this._renderVolumeButton(Math.abs(this._config.volume_step), 'mdi:volume-plus', lightColor)}
                     ` : ''}
-                    ${showExpandButton ? html`
+                    ${showExpandButton ? b`
                         <div class="expand-button"
                             role="button"
                             tabindex="0"
@@ -474,7 +499,7 @@ class HatchCard extends LitElement {
     }
 
     _renderVerticalLayout(isOn, lightColor, secondaryInfo, activeIcon, volumePercent, name, showExpandButton) {
-        return html`
+        return b`
             <div class="content-wrapper vertical">
                 <div class="vertical-top-block">
                     <div class="vertical-icon-container">
@@ -484,6 +509,10 @@ class HatchCard extends LitElement {
                             @pointermove="${this._handlePressMove}"
                             @pointerup="${this._handlePressEnd}"
                             @pointercancel="${this._cancelPress}"
+                            @keydown="${this._handleIconKeydown}"
+                            role="button"
+                            tabindex="0"
+                            aria-label="${name}"
                         >
                             ${this._renderIconOrPhoto(isOn, lightColor, activeIcon, true)}
                         </div>
@@ -492,10 +521,10 @@ class HatchCard extends LitElement {
                 </div>
                 <div class="info vertical">
                     <div class="name">${name}</div>
-                    ${secondaryInfo ? html`<div class="secondary-info">${secondaryInfo}</div>` : ''}
+                    ${secondaryInfo ? b`<div class="secondary-info">${secondaryInfo}</div>` : ''}
                 </div>
                 ${this._config.show_battery_indicator ? this._renderBatteryIndicator(true) : ''}
-                ${showExpandButton ? html`
+                ${showExpandButton ? b`
                     <div class="expand-button vertical"
                         role="button"
                         tabindex="0"
@@ -557,9 +586,9 @@ class HatchCard extends LitElement {
             .filter(control => control && control.is_visible())
             .map(control => control.render());
 
-        if (orderedControls.length === 0) return html``;
+        if (orderedControls.length === 0) return b``;
 
-        return html`
+        return b`
             <div class="expanded-controls ${showAlways ? 'always-visible' : ''}">
                 ${orderedControls}
             </div>
@@ -584,21 +613,10 @@ class HatchCard extends LitElement {
     _renderIconOrPhoto(isOn, lightColorStyle, activeIcon, isVertical = false) {
         if (this._config.user_photo || (activeIcon && activeIcon.startsWith('/'))) {
             const photoUrl = this._config.user_photo || activeIcon;
-            return html`<img class="user-photo ${isVertical ? 'vertical' : ''}" src="${photoUrl}" alt="${this._config.name || 'User'}" />`;
+            return b`<img class="user-photo ${isVertical ? 'vertical' : ''}" src="${photoUrl}" alt="${this._config.name || 'User'}" />`;
         }
 
-        let shapeBg;
-        if (isOn) {
-            if (lightColorStyle.startsWith('rgb')) {
-                shapeBg = lightColorStyle.replace('rgb', 'rgba').replace(')', ', 0.2)');
-            } else {
-                shapeBg = 'rgba(var(--rgb-primary-color), 0.2)';
-            }
-        } else {
-            shapeBg = 'rgba(var(--rgb-primary-text-color), 0.05)';
-        }
-
-        const shapeStyle = `background-color: ${shapeBg}`;
+        const shapeStyle = isOn ? `--control-color: ${lightColorStyle}` : '';
         const iconStyle = `color: ${isOn ? lightColorStyle : 'var(--primary-text-color, var(--paper-item-icon-color))'}`;
 
         const size = isVertical ? 48 : 36;
@@ -609,7 +627,7 @@ class HatchCard extends LitElement {
         const circumference = radius * 2 * Math.PI;
         const strokeDashoffset = circumference - (this._timerPercent / 100) * circumference;
 
-        const timerRing = this._timerPercent > 0 ? html`
+        const timerRing = this._timerPercent > 0 ? b`
             <svg 
                 style="
                     position: absolute; 
@@ -622,7 +640,7 @@ class HatchCard extends LitElement {
                 "
             >
                 <circle
-                    stroke="rgba(var(--rgb-primary-text-color), 0.1)"
+                    stroke="color-mix(in srgb, var(--disabled-color, #bdbdbd) 40%, transparent)"
                     fill="transparent"
                     stroke-width="${strokeWidth}"
                     r="${radius}"
@@ -642,8 +660,8 @@ class HatchCard extends LitElement {
             </svg>
         ` : '';
 
-        return html`
-            <div class="shape ${isVertical ? 'vertical' : ''}" style="${shapeStyle}; position: relative;">
+        return b`
+            <div class="shape ${isVertical ? 'vertical' : ''}" style="${shapeStyle}">
                 ${timerRing}
                 <ha-icon .icon="${activeIcon}" style="${iconStyle}"></ha-icon>
             </div>
@@ -655,22 +673,12 @@ class HatchCard extends LitElement {
         const lightState = this._config.light_entity ? this.hass.states[this._config.light_entity] : null;
         const isOn = lightState ? lightState.state === 'on' : mediaState.state === 'playing';
 
-        let bg = 'rgba(var(--rgb-primary-text-color), 0.05)';
-        let fg = 'var(--primary-text-color)';
-        if (isOn) {
-            if (lightColorStyle && lightColorStyle.startsWith('rgb')) {
-                bg = lightColorStyle.replace('rgb', 'rgba').replace(')', ', 0.15)');
-                fg = lightColorStyle;
-            } else {
-                bg = 'rgba(var(--rgb-primary-color), 0.15)';
-                fg = lightColorStyle || 'var(--primary-color)';
-            }
-        }
+        const color = lightColorStyle || 'var(--primary-color)';
 
-        return html`
+        return b`
             <button
-                class="action-button icon-button"
-                style="--button-bg: ${bg}; --button-fg: ${fg};"
+                class="action-button icon-button ${isOn ? 'tinted' : ''}"
+                style="${isOn ? `--control-color: ${color}` : ''}"
                 @click="${(e) => { e.stopPropagation(); this._handleVolumeChange(change); }}"
                 aria-label="${change > 0 ? 'Increase' : 'Decrease'} volume"
             >
@@ -698,16 +706,20 @@ class HatchCard extends LitElement {
 
         const stop = (e) => e.stopPropagation();
 
-        return html`
-            <select
-                class="sound-select"
-                @change="${this._handleSoundChange}"
-                @mousedown="${stop}"
-                @click="${stop}"
-                @touchstart="${stop}"
-            >
-                ${items.map((it) => html`<option value="${it.value}" ?selected="${it.value === selectedOption}">${it.label}</option>`)}
-            </select>
+        return b`
+            <div class="select-wrapper">
+                <select
+                    class="sound-select"
+                    aria-label="Sound"
+                    @change="${this._handleSoundChange}"
+                    @mousedown="${stop}"
+                    @click="${stop}"
+                    @touchstart="${stop}"
+                >
+                    ${items.map((it) => b`<option value="${it.value}" ?selected="${it.value === selectedOption}">${it.label}</option>`)}
+                </select>
+                <ha-icon class="select-arrow" icon="mdi:menu-down"></ha-icon>
+            </div>
         `;
     }
 
@@ -773,10 +785,11 @@ class HatchCard extends LitElement {
         const percent = Math.max(0, Math.min(100, (shown / max) * 100));
         const slider = { key, min, max, step, onCommit };
 
-        return html`
+        return b`
             <div class="control-row">
                 <ha-icon icon="${icon}"></ha-icon>
                 <div class="slider-container ${preview && preview.key === key ? 'dragging' : ''}"
+                    style="--control-color: ${color}"
                     @pointerdown="${(e) => this._sliderPointerDown(e, slider)}"
                     @pointermove="${this._sliderPointerMove}"
                     @pointerup="${this._sliderPointerUp}"
@@ -785,7 +798,7 @@ class HatchCard extends LitElement {
                     <div class="slider-track">
                         <div 
                             class="slider-fill" 
-                            style="width: ${percent}%; background-color: ${color};"
+                            style="width: ${percent}%;"
                         ></div>
                     </div>
                     <input 
@@ -865,15 +878,15 @@ class HatchCard extends LitElement {
     }
 
     _renderVolumePresetsControl(volumeLevel, lightColor) {
-        return html`
+        return b`
             <div class="control-row presets">
                 <ha-icon icon="mdi:volume-high"></ha-icon>
                 <div class="action-buttons">
-                    ${this._config.volume_presets.map(preset => html`
+                    ${this._config.volume_presets.map(preset => b`
                         <button 
                             class="action-button ${Math.abs(volumeLevel - preset) < 0.01 ? 'active' : ''}"
                             @click="${() => this._setVolume(preset)}"
-                            style="--button-color: ${lightColor}"
+                            style="--control-color: ${lightColor}"
                         >
                             ${Math.round(preset * 100)}%
                         </button>
@@ -884,7 +897,7 @@ class HatchCard extends LitElement {
     }
 
     _renderSoundControl(mediaState) {
-        return html`
+        return b`
             <div class="control-row">
                 <ha-icon icon="mdi:music-note"></ha-icon>
                 ${this._renderSoundSelect(mediaState)}
@@ -897,22 +910,22 @@ class HatchCard extends LitElement {
         const hasTimerEntity = !!timerEntityId && timerEntityId.startsWith('timer.');
         const hasActiveTimer = !!this._timerRemaining;
 
-        if (!hasTimerEntity) return html``;
+        if (!hasTimerEntity) return b``;
 
-        return html`
+        return b`
             <div class="control-row">
                 <ha-icon icon="mdi:timer-outline"></ha-icon>
                 <div class="timer-buttons">
-                    ${this._getTimerPresets().map(preset => html`
+                    ${this._getTimerPresets().map(preset => b`
                         <button
                             class="action-button"
                             @click="${() => this._setTimer(preset.value)}"
-                            style="--button-color: ${lightColor}"
+                            style="--control-color: ${lightColor}"
                         >
                             ${preset.label}
                         </button>
                     `)}
-                    ${hasActiveTimer ? html`
+                    ${hasActiveTimer ? b`
                         <button
                             class="action-button danger"
                             @click="${() => this._cancelTimer()}"
@@ -927,7 +940,7 @@ class HatchCard extends LitElement {
 
     _renderTimeControl() {
         const timeEntityId = this._config.time_entity;
-        if (!timeEntityId) return html``;
+        if (!timeEntityId) return b``;
 
         const timeEntity = this.hass.states[timeEntityId];
         if (!timeEntity) {
@@ -945,7 +958,7 @@ class HatchCard extends LitElement {
         const icon = attrs.icon || 'mdi:alarm';
         const label = this._config.time_name || attrs.friendly_name || 'Time';
 
-        return html`
+        return b`
             <div class="control-row time-control">
                 <ha-icon icon="${icon}"></ha-icon>
                 <span class="time-label">${label}</span>
@@ -999,7 +1012,7 @@ class HatchCard extends LitElement {
     }
 
     _renderScenesControl(lightColor, hasLight) {
-        return html`
+        return b`
             <div class="control-row scenes">
                 <ha-icon icon="mdi:palette"></ha-icon>
                 <div class="scene-buttons ${this._config.layout === 'vertical' ? 'vertical' : ''}"
@@ -1013,15 +1026,15 @@ class HatchCard extends LitElement {
                         const hasIcon = typeof scene.icon === 'string' ? scene.icon.trim().length > 0 : !!scene.icon;
                         const icon = hasIcon ? scene.icon : (!hasName ? 'mdi:palette' : null);
 
-                        return html`
+                        return b`
                             <button
                                 class="action-button"
                                 @click="${() => this._activateScene(scene, hasLight)}"
                                 aria-label="${hasName ? scene.name : 'Scene'}"
-                                style="--scene-color: ${sceneColor}"
+                                style="--control-color: ${sceneColor}"
                             >
-                                ${icon ? html`<ha-icon icon="${icon}"></ha-icon>` : ''}
-                                ${hasName ? html`<span>${scene.name}</span>` : ''}
+                                ${icon ? b`<ha-icon icon="${icon}"></ha-icon>` : ''}
+                                ${hasName ? b`<span>${scene.name}</span>` : ''}
                             </button>
                         `;
                     })}
@@ -1037,13 +1050,13 @@ class HatchCard extends LitElement {
         }
         const isLocked = lockEntity.state === 'on';
 
-        return html`
+        return b`
             <div class="control-row toggle-control">
                 <div class="toggle-label">
                     <ha-icon icon="mdi:human-child"></ha-icon>
                     <span>Toddler Lock</span>
                 </div>
-                <div class="toggle-switch ${isLocked ? 'locked' : ''}" @click=${this._toggleToddlerLock} role="switch" aria-checked="${isLocked}" tabindex="0">
+                <div class="toggle-switch ${isLocked ? 'locked' : ''}" @click=${this._toggleToddlerLock} @keydown=${this._handleToggleKeydown} role="switch" aria-checked="${isLocked ? 'true' : 'false'}" aria-label="Toddler Lock" tabindex="0">
                     <div class="toggle-thumb">
                         <ha-icon icon="${isLocked ? 'mdi:lock' : 'mdi:lock-open-variant'}"></ha-icon>
                     </div>
@@ -1087,9 +1100,9 @@ class HatchCard extends LitElement {
 
         const style = isVertical ? 'position: absolute; top: 12px; right: 12px;' : '';
 
-        return html`
+        return b`
             <div class="battery-indicator" style="${style}; color: ${color};">
-                ${this._config.show_battery_percentage ? html`
+                ${this._config.show_battery_percentage ? b`
                     <span class="battery-percent">${level}%</span>
                 ` : ''}
                 <ha-icon .icon="${icon}"></ha-icon>
@@ -1098,11 +1111,11 @@ class HatchCard extends LitElement {
     }
 
     _renderError(message) {
-        return html`<ha-card><div class="grid"><div class="error-msg">${message}</div></div></ha-card>`;
+        return b`<ha-card><div class="grid"><div class="error-msg">${message}</div></div></ha-card>`;
     }
 
     _renderWarning(message) {
-        return html`<div class="warning-msg">${message}</div>`;
+        return b`<div class="warning-msg">${message}</div>`;
     }
 
     _handleAction(action) {
@@ -1265,6 +1278,23 @@ class HatchCard extends LitElement {
         e.stopPropagation();
         this._vibrate();
         this._showControls = !this._showControls;
+    }
+
+    _isActivationKey(e) {
+        return e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar';
+    }
+
+    _handleIconKeydown(e) {
+        if (!this._isActivationKey(e) || e.repeat) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this._handleAction(this._config.tap_action);
+    }
+
+    _handleToggleKeydown(e) {
+        if (!this._isActivationKey(e) || e.repeat) return;
+        e.preventDefault();
+        this._toggleToddlerLock();
     }
 
     _handleExpandKeydown(e) {
@@ -1560,11 +1590,32 @@ class HatchCard extends LitElement {
     }
 
     static get styles() {
-        return css`
+        return i$3`
+            /*
+             * Controls follow Home Assistant's theme tokens, mirroring the
+             * built-in tile card features (ha-control-slider/button/select).
+             * Themes or card-mod can override the --hatch-control-* variables.
+             * Tokens resolve on ha-card (not :host) so card-mod styles, which
+             * apply to ha-card, take effect as well as theme variables.
+             */
             :host {
                 display: block;
             }
             ha-card {
+                --_control-height: var(--hatch-control-height, 42px);
+                --_control-radius: var(--hatch-control-border-radius, var(--ha-card-features-border-radius, var(--ha-border-radius-lg, 12px)));
+                --_control-neutral: var(--hatch-control-background, var(--disabled-color, #bdbdbd));
+                --_control-bg-amount: 20%;
+                --_control-hover-amount: 35%;
+                --_control-gap: var(--ha-space-2, 8px);
+                --_focus-color: var(--hatch-focus-color, var(--secondary-text-color));
+                --_on-color-text: var(--text-primary-color, #fff);
+                --_font-family: var(--ha-font-family-body, inherit);
+                --_font-size-s: var(--ha-font-size-s, 12px);
+                --_font-size-m: var(--ha-font-size-m, 14px);
+                --_font-size-l: var(--ha-font-size-l, 16px);
+                --_font-weight-normal: var(--ha-font-weight-normal, 400);
+                --_font-weight-medium: var(--ha-font-weight-medium, 500);
                 position: relative;
                 transition: all var(--animation-duration, 250ms) ease-in-out;
                 display: flex;
@@ -1605,6 +1656,7 @@ class HatchCard extends LitElement {
                 gap: 4px;
                 flex-shrink: 0;
             }
+            .volume-percent { color: var(--primary-text-color); }
             .vertical-layout { padding: 0 8px; min-height: 120px; position: relative; }
             .vertical-layout.expanded { height: auto; }
             .vertical-layout.has-expand-button { min-height: 120px; }
@@ -1670,8 +1722,17 @@ class HatchCard extends LitElement {
                 justify-content: center;
                 height: 36px;
                 width: 36px;
-                border-radius: 50%;
+                border-radius: var(--ha-tile-icon-border-radius, var(--ha-border-radius-pill, 50%));
+                background-color: color-mix(in srgb, var(--control-color, var(--_control-neutral)) var(--_control-bg-amount), transparent);
                 transition: background-color var(--animation-duration, 250ms);
+            }
+            .icon-container:focus-visible { outline: none; }
+            .icon-container:focus-visible .shape,
+            .icon-container:focus-visible .user-photo {
+                box-shadow: 0 0 0 2px var(--control-color, var(--_focus-color));
+            }
+            @media (hover: hover) {
+                .icon-container:hover .shape { --_control-bg-amount: var(--_control-hover-amount); }
             }
             .shape.vertical { width: 48px; height: 48px; }
             .shape.vertical ha-icon { --mdc-icon-size: 28px; }
@@ -1679,7 +1740,7 @@ class HatchCard extends LitElement {
             .user-photo {
                 height: 36px;
                 width: 36px;
-                border-radius: 50%;
+                border-radius: var(--ha-tile-icon-border-radius, var(--ha-border-radius-pill, 50%));
                 object-fit: cover;
             }
             .user-photo.vertical {
@@ -1687,23 +1748,23 @@ class HatchCard extends LitElement {
                 height: auto;
                 max-height: 48px;
                 object-fit: contain;
-                border-radius: 4px;
+                border-radius: var(--ha-border-radius-sm, 4px);
             }
             .info { overflow: hidden; flex: 1 1 auto; min-width: 0; }
             .name {
-                font-size: 14px;
-                font-weight: 500;
+                font-size: var(--ha-tile-info-primary-font-size, var(--_font-size-m));
+                font-weight: var(--ha-tile-info-primary-font-weight, var(--_font-weight-medium));
                 line-height: 20px;
-                color: var(--primary-text-color);
+                color: var(--ha-tile-info-primary-color, var(--primary-text-color));
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
             .secondary-info {
-                font-size: 12px;
-                font-weight: 400;
+                font-size: var(--ha-tile-info-secondary-font-size, var(--_font-size-s));
+                font-weight: var(--ha-tile-info-secondary-font-weight, var(--_font-weight-normal));
                 line-height: 16px;
-                color: var(--secondary-text-color);
+                color: var(--ha-tile-info-secondary-color, var(--secondary-text-color));
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -1722,8 +1783,8 @@ class HatchCard extends LitElement {
             }
             .expand-button:hover { color: var(--primary-text-color); }
             .expand-button:focus-visible {
-                outline: 2px solid var(--primary-color);
-                outline-offset: 2px;
+                outline: none;
+                box-shadow: 0 0 0 2px var(--_focus-color);
             }
             .expand-icon {
                 display: flex;
@@ -1790,7 +1851,7 @@ class HatchCard extends LitElement {
                 flex-shrink: 0;
             }
             .control-value {
-                font-size: 0.875rem;
+                font-size: var(--_font-size-m);
                 color: var(--secondary-text-color);
                 min-width: 24px;
                 text-align: right;
@@ -1798,20 +1859,20 @@ class HatchCard extends LitElement {
             .time-control .time-label {
                 flex: 1;
                 color: var(--primary-text-color);
-                font-size: 1rem;
+                font-size: var(--_font-size-l);
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
             }
             .time-control .time-input {
-                font-family: inherit;
-                font-size: 0.875rem;
-                height: 40px;
+                font-family: var(--_font-family);
+                font-size: var(--_font-size-m);
+                height: var(--_control-height);
                 box-sizing: border-box;
                 color: var(--primary-text-color);
-                background-color: rgba(var(--rgb-primary-text-color), 0.05);
+                background-color: color-mix(in srgb, var(--_control-neutral) var(--_control-bg-amount), transparent);
                 border: none;
-                border-radius: var(--ha-card-border-radius, 12px);
+                border-radius: var(--_control-radius);
                 padding: 0 12px;
                 text-align: center;
                 cursor: pointer;
@@ -1835,32 +1896,34 @@ class HatchCard extends LitElement {
                 display: none;
                 -webkit-appearance: none;
             }
-            .time-control .time-input:hover {
-                background-color: rgba(var(--rgb-primary-color), 0.12);
+            @media (hover: hover) {
+                .time-control .time-input:hover { --_control-bg-amount: var(--_control-hover-amount); }
             }
-            .time-control .time-input:focus {
-                outline: none;
-                background-color: rgba(var(--rgb-primary-color), 0.12);
-            }
+            .time-control .time-input:focus { outline: none; }
+            .time-control .time-input:focus-visible { box-shadow: 0 0 0 2px var(--_focus-color); }
             .slider-container {
+                --control-color: var(--primary-color);
                 position: relative;
                 flex: 1;
-                height: 40px;
+                height: var(--_control-height);
                 display: flex;
                 align-items: center;
-                border-radius: var(--ha-card-border-radius, 12px);
+                border-radius: var(--_control-radius);
                 cursor: pointer;
                 touch-action: pan-y;
                 -webkit-user-select: none;
                 user-select: none;
                 -webkit-tap-highlight-color: transparent;
             }
+            .slider-container:focus-within {
+                box-shadow: 0 0 0 2px var(--control-color);
+            }
             .slider-container.dragging .slider-fill { transition: none; }
             .slider-track {
                 position: absolute;
                 width: 100%;
-                height: 40px;
-                background-color: rgba(var(--rgb-primary-text-color), 0.05);
+                height: 100%;
+                background-color: color-mix(in srgb, var(--control-color) var(--_control-bg-amount), transparent);
                 border-radius: inherit;
                 overflow: hidden;
             }
@@ -1870,12 +1933,12 @@ class HatchCard extends LitElement {
                 left: 0;
                 height: 100%;
                 transition: width var(--animation-duration, 250ms) ease-out;
-                background-color: var(--primary-color);
+                background-color: var(--control-color);
             }
             .slider-input {
                 position: relative;
                 width: 100%;
-                height: 40px;
+                height: 100%;
                 -webkit-appearance: none;
                 appearance: none;
                 background: transparent;
@@ -1894,40 +1957,54 @@ class HatchCard extends LitElement {
             .slider-input::-moz-range-thumb { width: 0; height: 0; border: 0; }
             .action-buttons, .preset-buttons, .timer-buttons {
                 display: flex;
-                gap: 8px;
+                gap: var(--_control-gap);
                 flex: 1;
             }
             .action-button {
                 flex: 1;
-                height: 40px;
+                height: var(--_control-height);
                 padding: 0 12px;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
                 gap: 6px;
-                background-color: var(--button-bg, rgba(var(--rgb-primary-text-color), 0.05));
-                color: var(--button-fg, var(--primary-text-color));
+                background-color: color-mix(in srgb, var(--_control-neutral) var(--_control-bg-amount), transparent);
+                color: var(--primary-text-color);
                 border: none;
-                border-radius: var(--ha-card-border-radius, 12px);
+                border-radius: var(--_control-radius);
                 cursor: pointer;
-                font-size: 0.875rem;
-                transition: background-color var(--animation-duration, 250ms), color var(--animation-duration, 250ms);
+                font-family: var(--_font-family);
+                font-size: var(--_font-size-m);
+                font-weight: var(--_font-weight-medium);
+                transition: background-color var(--animation-duration, 250ms), color var(--animation-duration, 250ms), box-shadow var(--animation-duration, 250ms);
                 box-sizing: border-box;
+                -webkit-tap-highlight-color: transparent;
             }
-            .action-button:hover {
-                background-color: var(--button-color, rgba(var(--rgb-primary-color), 0.12));
+            @media (hover: hover) {
+                .action-button:hover {
+                    background-color: color-mix(in srgb, var(--control-color, var(--_control-neutral)) var(--_control-hover-amount), transparent);
+                }
+            }
+            .action-button:focus { outline: none; }
+            .action-button:focus-visible {
+                box-shadow: 0 0 0 2px var(--control-color, var(--_focus-color));
+            }
+            .action-button.tinted {
+                background-color: color-mix(in srgb, var(--control-color) var(--_control-bg-amount), transparent);
+                color: var(--control-color);
             }
             .action-button.active {
-                background-color: var(--button-color, var(--primary-color));
-                color: white;
+                background-color: var(--control-color, var(--primary-color));
+                color: var(--_on-color-text);
             }
             .action-button.danger {
-                background-color: var(--error-color);
-                color: white;
+                --control-color: var(--error-color, #db4437);
+                background-color: var(--control-color);
+                color: var(--_on-color-text);
             }
             .action-button.icon-button {
-                flex: 0 0 40px;
-                width: 40px;
+                flex: 0 0 var(--_control-height);
+                width: var(--_control-height);
                 padding: 0;
             }
             .action-button.icon-button ha-icon {
@@ -1935,31 +2012,48 @@ class HatchCard extends LitElement {
             }
             .error-msg, .warning-msg {
                 background-color: var(--error-color, #db4437);
-                color: white;
+                color: var(--_on-color-text);
                 padding: 16px;
-                border-radius: var(--ha-card-border-radius, 12px);
+                border-radius: var(--_control-radius);
+            }
+            .select-wrapper {
+                position: relative;
+                flex: 1;
+                min-width: 0;
+                display: flex;
+                align-items: center;
             }
             .sound-select {
                 width: 100%;
-                height: 40px;
-                border-radius: var(--ha-card-border-radius, 12px);
-                border: 1px solid var(--divider-color);
-                background: var(--ha-card-background, var(--card-background-color));
+                height: var(--_control-height);
+                border-radius: var(--_control-radius);
+                border: none;
+                background-color: color-mix(in srgb, var(--_control-neutral) var(--_control-bg-amount), transparent);
                 color: var(--primary-text-color);
                 -webkit-appearance: none;
                 -moz-appearance: none;
                 appearance: none;
-                padding: 0 44px 0 12px;
-                font-size: 14px;
+                padding: 0 40px 0 12px;
+                font-family: var(--_font-family);
+                font-size: var(--_font-size-m);
                 outline: none;
-                background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'><path fill='rgb(160,160,160)' d='M7 10l5 5 5-5z'/></svg>");
-                background-repeat: no-repeat;
-                background-position: right 14px center;
-                background-size: 16px 16px;
+                cursor: pointer;
+                transition: background-color var(--animation-duration, 250ms);
+            }
+            .sound-select option {
+                background-color: var(--card-background-color, #fff);
+                color: var(--primary-text-color);
             }
             .sound-select::-ms-expand { display: none; }
-            .sound-select:focus {
-                border-color: var(--primary-color);
+            @media (hover: hover) {
+                .sound-select:hover { --_control-bg-amount: var(--_control-hover-amount); }
+            }
+            .sound-select:focus-visible { box-shadow: 0 0 0 2px var(--_focus-color); }
+            .control-row .select-arrow {
+                position: absolute;
+                right: 10px;
+                pointer-events: none;
+                color: var(--secondary-text-color);
             }
             .warning-msg { background-color: var(--warning-color, #ffa600); }
             @media (prefers-reduced-motion: reduce) {
@@ -1978,26 +2072,6 @@ class HatchCard extends LitElement {
                 width: 100%;
                 box-sizing: border-box;
             }
-            .scene-button {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                gap: 4px;
-                padding: 10px;
-                background-color: rgba(var(--rgb-primary-text-color), 0.05);
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                font-size: 12px;
-                color: var(--primary-text-color);
-                transition: all var(--animation-duration, 250ms);
-                width: 100%;
-                height: 100%;
-                box-sizing: border-box;
-            }
-            .scene-button:hover { background-color: var(--scene-color, rgba(var(--rgb-primary-color), 0.1)); }
-            .scene-button ha-icon { color: var(--primary-text-color); --mdc-icon-size: 24px; }
             .toggle-control {
                 justify-content: space-between;
             }
@@ -2011,65 +2085,70 @@ class HatchCard extends LitElement {
             }
             .toggle-label span {
                 color: var(--primary-text-color);
-                font-size: 1rem;
+                font-size: var(--_font-size-l);
             }
             .toggle-switch {
+                --_switch-color: var(--_control-neutral);
+                --_switch-padding: 3px;
+                --_thumb-size: calc(var(--_control-height) - 2 * var(--_switch-padding));
                 position: relative;
-                width: 60px;
-                height: 40px;
-                background-color: rgba(var(--rgb-primary-text-color), 0.05);
-                border-radius: var(--ha-card-border-radius, 12px);
+                width: calc(var(--_control-height) * 1.5);
+                height: var(--_control-height);
+                box-sizing: border-box;
+                padding: var(--_switch-padding);
+                background-color: color-mix(in srgb, var(--_switch-color) var(--_control-bg-amount), transparent);
+                border-radius: var(--_control-radius);
                 cursor: pointer;
-                transition: background-color 0.2s ease-in-out;
+                transition: background-color var(--animation-duration, 250ms) ease-in-out;
                 flex-shrink: 0;
+                -webkit-tap-highlight-color: transparent;
             }
             .toggle-switch.locked {
-                background-color: var(--primary-color);
+                --_switch-color: var(--hatch-switch-on-color, var(--primary-color));
             }
+            .toggle-switch:focus { outline: none; }
+            .toggle-switch:focus-visible { box-shadow: 0 0 0 2px var(--_switch-color); }
             .toggle-thumb {
                 position: relative;
-                top: 2px;
-                left: 2px;
-                width: 36px;
-                height: 36px;
-                background-color: var(--card-background-color, #FFF);
-                border-radius: var(--ha-card-border-radius, 12px);
+                width: var(--_thumb-size);
+                height: var(--_thumb-size);
+                background-color: var(--_switch-color);
+                border-radius: calc(var(--_control-radius) - var(--_switch-padding));
                 display: grid;
                 place-items: center;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-                transition: transform 0.2s ease-in-out;
-                color: var(--secondary-text-color);
+                transition: transform var(--animation-duration, 250ms) ease-in-out, background-color var(--animation-duration, 250ms);
+                color: var(--_on-color-text);
             }
             .toggle-thumb ha-icon {
-                --mdc-icon-size: 26px;
+                color: inherit;
+                --mdc-icon-size: 22px;
                 position: absolute;
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
             }
             .toggle-switch.locked .toggle-thumb {
-                transform: translateX(20px);
-                color: var(--primary-color);
+                transform: translateX(calc(var(--_control-height) * 1.5 - var(--_thumb-size) - 2 * var(--_switch-padding)));
             }
             .battery-indicator {
                 display: flex;
                 align-items: center;
                 gap: 4px;
-                font-size: 12px;
+                font-size: var(--_font-size-s);
                 transition: color 0.2s;
             }
             .battery-indicator ha-icon {
                 --mdc-icon-size: 20px;
             }
             .battery-percent {
-                font-weight: 500;
-                font-size: 14px;
+                font-weight: var(--_font-weight-medium);
+                font-size: var(--_font-size-m);
             }
         `;
     }
 }
 
-class HatchCardEditor extends LitElement {
+class HatchCardEditor extends i {
     static get properties() {
         return {
             hass: {},
@@ -2142,22 +2221,22 @@ class HatchCardEditor extends LitElement {
 
     // Render a text/number input using ha-input on HA 2026.4+ (where
     // ha-textfield is a compat shim that can render empty) and ha-textfield on
-    // older HA. lit-element 2.x has no static-html, so we branch on the tag.
+    // older HA. We branch on the tag rather than using lit's static-html.
     _tf({ id = '', label = '', value = '', type = 'text', min = '', max = '', step = '', helper = '', placeholder = '', change } = {}) {
         const handler = change || ((e) => this._valueChanged(e));
         const v = value ?? '';
         if (customElements.get("ha-input")) {
-            return html`<ha-input id="${id}" label="${label}" .value="${v}" type="${type}" min="${min}" max="${max}" step="${step}" helper="${helper}" placeholder="${placeholder}" @input="${handler}" @change="${handler}"></ha-input>`;
+            return b`<ha-input id="${id}" label="${label}" .value="${v}" type="${type}" min="${min}" max="${max}" step="${step}" helper="${helper}" placeholder="${placeholder}" @input="${handler}" @change="${handler}"></ha-input>`;
         }
-        return html`<ha-textfield id="${id}" label="${label}" .value="${v}" type="${type}" min="${min}" max="${max}" step="${step}" helper="${helper}" placeholder="${placeholder}" @input="${handler}" @change="${handler}"></ha-textfield>`;
+        return b`<ha-textfield id="${id}" label="${label}" .value="${v}" type="${type}" min="${min}" max="${max}" step="${step}" helper="${helper}" placeholder="${placeholder}" @input="${handler}" @change="${handler}"></ha-textfield>`;
     }
 
     _renderSearchInput() {
         const handler = (e) => { this._searchQuery = e.target.value || ''; };
         if (customElements.get("ha-input")) {
-            return html`<ha-input class="editor-search" outlined label="Search settings" .value="${this._searchQuery || ''}" @input="${handler}"></ha-input>`;
+            return b`<ha-input class="editor-search" outlined label="Search settings" .value="${this._searchQuery || ''}" @input="${handler}"></ha-input>`;
         }
-        return html`<ha-textfield class="editor-search" outlined label="Search settings" .value="${this._searchQuery || ''}" @input="${handler}"></ha-textfield>`;
+        return b`<ha-textfield class="editor-search" outlined label="Search settings" .value="${this._searchQuery || ''}" @input="${handler}"></ha-textfield>`;
     }
 
     updated() {
@@ -2343,8 +2422,8 @@ class HatchCardEditor extends LitElement {
     }
 
     render() {
-        if (!this.hass) return html`<div>Loading...</div>`;
-        if (!this._config) return html`<div>No configuration</div>`;
+        if (!this.hass) return b`<div>Loading...</div>`;
+        if (!this._config) return b`<div>No configuration</div>`;
 
         const hasLight = !!this._config.light_entity;
         const currentMediaPlayer = this._config?.media_player_entity;
@@ -2425,7 +2504,7 @@ class HatchCardEditor extends LitElement {
         const panel = (key, title, icon, content) => {
             const isSearching = !!(this._searchQuery && this._searchQuery.trim());
             const expanded = isSearching ? true : !!this._expandedSections?.[key];
-            return html`
+            return b`
                 <ha-expansion-panel
                     outlined
                     ?expanded=${expanded}
@@ -2440,7 +2519,7 @@ class HatchCardEditor extends LitElement {
             `;
         };
 
-        const basicContent = html`
+        const basicContent = b`
             <div class="form-block" data-search-text="name media player entity light entity default icon user photo url">
                 <ha-form
                     .hass=${this.hass}
@@ -2451,12 +2530,12 @@ class HatchCardEditor extends LitElement {
             </div>
         `;
 
-        const layoutContent = html`
+        const layoutContent = b`
             <ha-select key="layout" label="Layout" .value="${this._config?.layout || 'horizontal'}" .options=${[{value:'horizontal',label:'Horizontal'},{value:'vertical',label:'Vertical'}]} @selected="${this._valueChanged}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
                 <mwc-list-item value="horizontal">Horizontal</mwc-list-item>
                 <mwc-list-item value="vertical">Vertical</mwc-list-item>
             </ha-select>
-            ${hasLight ? html`
+            ${hasLight ? b`
                 <ha-select key="background_mode" label="Background Mode" .value="${this._config?.background_mode || 'full'}" .options=${[{value:'none',label:'None'},{value:'full',label:'Full Color'},{value:'volume',label:'Volume Fill'}]} @selected="${this._valueChanged}" @change="${this._valueChanged}" @closed="${(e) => e.stopPropagation()}">
                     <mwc-list-item value="none">None</mwc-list-item>
                     <mwc-list-item value="full">Full Color</mwc-list-item>
@@ -2467,13 +2546,13 @@ class HatchCardEditor extends LitElement {
             ${this._tf({ id: 'controls_order', label: 'Expanded Controls Order (Optional)', value: (this._config?.controls_order || ['brightness', 'clock_brightness', 'volume_slider', 'volume_presets', 'sound', 'scenes', 'timer', 'time', 'toddler_lock']).join(', '), helper: 'Comma-separated list of control keys.' })}
         `;
 
-        const controlsContent = html`
+        const controlsContent = b`
             <div class="switches">
                 <label class="switch-wrapper"><ha-switch id="show_volume_buttons" .checked="${this._config?.show_volume_buttons !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Volume Buttons</span></div></label>
                 <label class="switch-wrapper"><ha-switch id="show_volume_slider" .checked="${this._config?.show_volume_slider === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Volume Slider</span></div></label>
                 <label class="switch-wrapper"><ha-switch id="show_expand_button" .checked="${this._config?.show_expand_button === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Expand Button</span><div class="switch-description">Hide controls behind a toggle button</div></div></label>
                 <label class="switch-wrapper"><ha-switch id="show_sound_control" .checked="${this._config?.show_sound_control === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Sound Control</span></div></label>
-                ${hasLight ? html`
+                ${hasLight ? b`
                     <label class="switch-wrapper"><ha-switch id="show_brightness_control" .checked="${this._config?.show_brightness_control === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Brightness Control</span></div></label>
                     <label class="switch-wrapper"><ha-switch id="show_brightness_when_off" .checked="${this._config?.show_brightness_when_off === true}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Brightness When Off</span></div></label>
                 ` : ''}
@@ -2482,20 +2561,20 @@ class HatchCardEditor extends LitElement {
             </div>
         `;
 
-        const deviceControlsContent = html`
+        const deviceControlsContent = b`
             <label class="switch-wrapper"><ha-switch id="show_toddler_lock" .checked="${this._config?.show_toddler_lock}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Toddler Lock</span></div></label>
-            ${hasLight ? html`
+            ${hasLight ? b`
                 <label class="switch-wrapper"><ha-switch id="show_clock_brightness" .checked="${this._config?.show_clock_brightness}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Clock Brightness</span></div></label>
             ` : ''}
             <label class="switch-wrapper"><ha-switch id="show_time" .checked="${this._config?.show_time}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Time Selector</span><div class="switch-description">Pick and edit an input_datetime time helper</div></div></label>
             <label class="switch-wrapper"><ha-switch id="show_battery_indicator" .checked="${this._config?.show_battery_indicator}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Show Battery Indicator</span></div></label>
-            ${this._config.show_battery_indicator ? html`
+            ${this._config.show_battery_indicator ? b`
                 <label class="switch-wrapper">
                     <ha-switch id="show_battery_percentage" .checked="${this._config?.show_battery_percentage !== false}" @change="${this._valueChanged}"></ha-switch>
                     <div class="switch-label"><span>Show Battery Percentage</span></div>
                 </label>
             ` : ''}
-            ${deviceControlsSchema.length > 0 ? html`
+            ${deviceControlsSchema.length > 0 ? b`
                 <div class="form-block" data-search-text="toddler lock entity clock brightness entity time entity input_datetime time label battery level charging status">
                     <ha-form
                         .hass=${this.hass}
@@ -2507,9 +2586,9 @@ class HatchCardEditor extends LitElement {
             ` : ''}
         `;
 
-        const advancedContent = html`
+        const advancedContent = b`
             <label class="switch-wrapper"><ha-switch id="haptic" .checked="${this._config?.haptic !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Haptic Feedback</span></div></label>
-            ${hasLight ? html`
+            ${hasLight ? b`
                 <label class="switch-wrapper"><ha-switch id="volume_click_control" .checked="${this._config?.volume_click_control !== false}" @change="${this._valueChanged}"></ha-switch><div class="switch-label"><span>Volume Click Control</span><div class="switch-description">Click on card background to set volume</div></div></label>
             ` : ''}
             ${this._tf({ id: 'volume_presets', label: 'Volume Presets (Optional)', value: this._config?.volume_presets ? this._config.volume_presets.join(', ') : '', helper: 'Comma-separated values (0.0-1.0): 0.2, 0.5, 0.8' })}
@@ -2517,8 +2596,8 @@ class HatchCardEditor extends LitElement {
             ${this._tf({ id: 'animation_duration', label: 'Animation Duration (ms)', type: 'number', min: '0', max: '1000', step: '50', value: this._config?.animation_duration || 250 })}
         `;
 
-        const timerContent = html`
-            ${timerSchema.length > 0 ? html`
+        const timerContent = b`
+            ${timerSchema.length > 0 ? b`
                 <div class="form-block" data-search-text="timer entity">
                     <ha-form
                         .hass=${this.hass}
@@ -2531,23 +2610,23 @@ class HatchCardEditor extends LitElement {
             ${this._tf({ id: 'timer_presets', label: 'Timer Presets (minutes)', value: this._config.timer_presets ? this._config.timer_presets.join(', ') : '15, 30, 60, 120', helper: 'Comma-separated values in minutes' })}
         `;
 
-        const scenesContent = html`
+        const scenesContent = b`
             ${this._tf({ id: 'scenes_per_row', label: 'Scenes Per Row', type: 'number', min: '1', max: '8', value: this._config?.scenes_per_row || 4, helper: 'Number of scene buttons per row' })}
             <div class="subsection-title">Scenes</div>
-            ${this._config?.scenes && this._config.scenes.length > 0 ? html`
+            ${this._config?.scenes && this._config.scenes.length > 0 ? b`
                 <div class="scene-list">
                     ${this._config.scenes.map((scene, index) => {
                         const configuredSceneSound = scene.sound_mode;
                         const sceneSoundModes = [...baseSoundModes];
                         if (configuredSceneSound && !sceneSoundModes.includes(configuredSceneSound)) sceneSoundModes.unshift(configuredSceneSound);
-                        return html`
+                        return b`
                         <div class="scene-item">
                             <div class="scene-summary" @click="${() => this._editScene(index)}">
                                 <ha-icon icon="${scene.icon || 'mdi:palette'}"></ha-icon>
                                 <span>${scene.name || `Scene ${index + 1}`}</span>
                                 <ha-icon icon="mdi:delete" class="delete-icon" @click="${(e) => { e.stopPropagation(); this._deleteScene(index); }}"></ha-icon>
                             </div>
-                            ${this._editingSceneIndex === index ? html`
+                            ${this._editingSceneIndex === index ? b`
                                 <div class="scene-edit">
                                     ${this._tf({ label: 'Name', value: scene.name || '', placeholder: 'Scene name', change: (e) => this._updateScene(e, index, 'name') })}
                                     <ha-icon-picker label="Icon" .value="${scene.icon || ''}" @value-changed="${(e) => this._updateScene(e, index, 'icon')}" .placeholder="${'mdi:palette'}"></ha-icon-picker>
@@ -2556,18 +2635,18 @@ class HatchCardEditor extends LitElement {
                                     ${this._tf({ label: 'Transition (seconds)', type: 'number', min: '0', value: scene.transition ?? '', change: (e) => this._updateScene(e, index, 'transition') })}
                                     <div class="subsection-title">Option 2: Manual Controls</div>
                                     <div class="manual-controls ${scene.entity_id ? 'disabled' : ''}">
-                                        ${hasLight ? html`
+                                        ${hasLight ? b`
                                             <label class="switch-wrapper"><ha-switch .checked="${scene.turn_off_light === true}" @change="${(e) => this._updateScene(e, index, 'turn_off_light')}"></ha-switch><div class="switch-label"><span>Turn Off Light</span></div></label>
                                         ` : ''}
                                         <label class="switch-wrapper"><ha-switch .checked="${scene.turn_off_media === true}" @change="${(e) => this._updateScene(e, index, 'turn_off_media')}"></ha-switch><div class="switch-label"><span>Turn Off Media</span></div></label>
-                                        ${hasLight ? html`
+                                        ${hasLight ? b`
                                             ${this._tf({ label: 'Color', value: scene.color ? getColorNameFromRgb(scene.color) : '', helper: 'Color name or RGB (255,255,255)', change: (e) => this._updateScene(e, index, 'color') })}
                                             ${this._tf({ label: 'Brightness (%)', type: 'number', min: '1', max: '100', value: scene.brightness ?? '', change: (e) => this._updateScene(e, index, 'brightness') })}
                                         ` : ''}
-                                        ${baseSoundModes.length > 0 ? html`
+                                        ${baseSoundModes.length > 0 ? b`
                                             <ha-select label="Sound Mode" .value="${scene.sound_mode || ''}" .options=${[{value:'',label:''}, ...sceneSoundModes.map(m => ({value:m,label:m}))]} @selected="${(e) => this._updateScene(e, index, 'sound_mode')}" @change="${(e) => this._updateScene(e, index, 'sound_mode')}" @closed="${(e) => e.stopPropagation()}">
                                                 <mwc-list-item value=""></mwc-list-item>
-                                                ${sceneSoundModes.map(mode => html`<mwc-list-item .value="${mode}">${mode}</mwc-list-item>`)}
+                                                ${sceneSoundModes.map(mode => b`<mwc-list-item .value="${mode}">${mode}</mwc-list-item>`)}
                                             </ha-select>
                                         ` : ''}
                                         ${this._tf({ label: 'Volume (%)', type: 'number', min: '0', max: '100', value: scene.volume ?? '', change: (e) => this._updateScene(e, index, 'volume') })}
@@ -2578,11 +2657,11 @@ class HatchCardEditor extends LitElement {
                         </div>
                         `})}
                 </div>
-            ` : html`<div class="no-scenes">No scenes configured</div>`}
+            ` : b`<div class="no-scenes">No scenes configured</div>`}
             <button class="add-scene-button" @click="${this._addScene}"><ha-icon icon="mdi:plus"></ha-icon>Add Scene</button>
         `;
 
-        return html`
+        return b`
             <div class="editor-toolbar">
                 ${this._renderSearchInput()}
             </div>
@@ -2599,7 +2678,7 @@ class HatchCardEditor extends LitElement {
     }
 
     static get styles() {
-        return css`
+        return i$3`
             .card-config { display: flex; flex-direction: column; gap: 8px; }
             .editor-toolbar { padding: 4px 0 8px; }
             .editor-search { width: 100%; }

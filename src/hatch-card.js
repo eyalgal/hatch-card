@@ -7,11 +7,7 @@
  * License: MIT
  * Version: 1.5.3
  */
-import {
-    LitElement,
-    html,
-    css
-} from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
+import { LitElement, html, css } from "lit";
 
 const cardVersion = "1.5.3";
 console.info(`%c HATCH-CARD %c v${cardVersion} `, "color: white; background: #039be5; font-weight: 700;", "color: #039be5; background: white; font-weight: 700;");
@@ -441,9 +437,10 @@ class HatchCard extends LitElement {
                         @pointerup="${this._handlePressEnd}"
                         @pointercancel="${this._cancelPress}"
                         @click="${(e) => e.stopPropagation()}"
+                        @keydown="${this._handleIconKeydown}"
                         role="button"
                         tabindex="0"
-                        aria-label="Toggle"
+                        aria-label="${name}"
                     >
                         ${this._renderIconOrPhoto(isOn, lightColor, activeIcon)}
                     </div>
@@ -487,6 +484,10 @@ class HatchCard extends LitElement {
                             @pointermove="${this._handlePressMove}"
                             @pointerup="${this._handlePressEnd}"
                             @pointercancel="${this._cancelPress}"
+                            @keydown="${this._handleIconKeydown}"
+                            role="button"
+                            tabindex="0"
+                            aria-label="${name}"
                         >
                             ${this._renderIconOrPhoto(isOn, lightColor, activeIcon, true)}
                         </div>
@@ -590,18 +591,7 @@ class HatchCard extends LitElement {
             return html`<img class="user-photo ${isVertical ? 'vertical' : ''}" src="${photoUrl}" alt="${this._config.name || 'User'}" />`;
         }
 
-        let shapeBg;
-        if (isOn) {
-            if (lightColorStyle.startsWith('rgb')) {
-                shapeBg = lightColorStyle.replace('rgb', 'rgba').replace(')', ', 0.2)');
-            } else {
-                shapeBg = 'rgba(var(--rgb-primary-color), 0.2)';
-            }
-        } else {
-            shapeBg = 'rgba(var(--rgb-primary-text-color), 0.05)';
-        }
-
-        const shapeStyle = `background-color: ${shapeBg}`;
+        const shapeStyle = isOn ? `--control-color: ${lightColorStyle}` : '';
         const iconStyle = `color: ${isOn ? lightColorStyle : 'var(--primary-text-color, var(--paper-item-icon-color))'}`;
 
         const size = isVertical ? 48 : 36;
@@ -625,7 +615,7 @@ class HatchCard extends LitElement {
                 "
             >
                 <circle
-                    stroke="rgba(var(--rgb-primary-text-color), 0.1)"
+                    stroke="color-mix(in srgb, var(--disabled-color, #bdbdbd) 40%, transparent)"
                     fill="transparent"
                     stroke-width="${strokeWidth}"
                     r="${radius}"
@@ -646,7 +636,7 @@ class HatchCard extends LitElement {
         ` : '';
 
         return html`
-            <div class="shape ${isVertical ? 'vertical' : ''}" style="${shapeStyle}; position: relative;">
+            <div class="shape ${isVertical ? 'vertical' : ''}" style="${shapeStyle}">
                 ${timerRing}
                 <ha-icon .icon="${activeIcon}" style="${iconStyle}"></ha-icon>
             </div>
@@ -658,22 +648,12 @@ class HatchCard extends LitElement {
         const lightState = this._config.light_entity ? this.hass.states[this._config.light_entity] : null;
         const isOn = lightState ? lightState.state === 'on' : mediaState.state === 'playing';
 
-        let bg = 'rgba(var(--rgb-primary-text-color), 0.05)';
-        let fg = 'var(--primary-text-color)';
-        if (isOn) {
-            if (lightColorStyle && lightColorStyle.startsWith('rgb')) {
-                bg = lightColorStyle.replace('rgb', 'rgba').replace(')', ', 0.15)');
-                fg = lightColorStyle;
-            } else {
-                bg = 'rgba(var(--rgb-primary-color), 0.15)';
-                fg = lightColorStyle || 'var(--primary-color)';
-            }
-        }
+        const color = lightColorStyle || 'var(--primary-color)';
 
         return html`
             <button
-                class="action-button icon-button"
-                style="--button-bg: ${bg}; --button-fg: ${fg};"
+                class="action-button icon-button ${isOn ? 'tinted' : ''}"
+                style="${isOn ? `--control-color: ${color}` : ''}"
                 @click="${(e) => { e.stopPropagation(); this._handleVolumeChange(change); }}"
                 aria-label="${change > 0 ? 'Increase' : 'Decrease'} volume"
             >
@@ -702,15 +682,19 @@ class HatchCard extends LitElement {
         const stop = (e) => e.stopPropagation();
 
         return html`
-            <select
-                class="sound-select"
-                @change="${this._handleSoundChange}"
-                @mousedown="${stop}"
-                @click="${stop}"
-                @touchstart="${stop}"
-            >
-                ${items.map((it) => html`<option value="${it.value}" ?selected="${it.value === selectedOption}">${it.label}</option>`)}
-            </select>
+            <div class="select-wrapper">
+                <select
+                    class="sound-select"
+                    aria-label="Sound"
+                    @change="${this._handleSoundChange}"
+                    @mousedown="${stop}"
+                    @click="${stop}"
+                    @touchstart="${stop}"
+                >
+                    ${items.map((it) => html`<option value="${it.value}" ?selected="${it.value === selectedOption}">${it.label}</option>`)}
+                </select>
+                <ha-icon class="select-arrow" icon="mdi:menu-down"></ha-icon>
+            </div>
         `;
     }
 
@@ -780,6 +764,7 @@ class HatchCard extends LitElement {
             <div class="control-row">
                 <ha-icon icon="${icon}"></ha-icon>
                 <div class="slider-container ${preview && preview.key === key ? 'dragging' : ''}"
+                    style="--control-color: ${color}"
                     @pointerdown="${(e) => this._sliderPointerDown(e, slider)}"
                     @pointermove="${this._sliderPointerMove}"
                     @pointerup="${this._sliderPointerUp}"
@@ -788,7 +773,7 @@ class HatchCard extends LitElement {
                     <div class="slider-track">
                         <div 
                             class="slider-fill" 
-                            style="width: ${percent}%; background-color: ${color};"
+                            style="width: ${percent}%;"
                         ></div>
                     </div>
                     <input 
@@ -876,7 +861,7 @@ class HatchCard extends LitElement {
                         <button 
                             class="action-button ${Math.abs(volumeLevel - preset) < 0.01 ? 'active' : ''}"
                             @click="${() => this._setVolume(preset)}"
-                            style="--button-color: ${lightColor}"
+                            style="--control-color: ${lightColor}"
                         >
                             ${Math.round(preset * 100)}%
                         </button>
@@ -910,7 +895,7 @@ class HatchCard extends LitElement {
                         <button
                             class="action-button"
                             @click="${() => this._setTimer(preset.value)}"
-                            style="--button-color: ${lightColor}"
+                            style="--control-color: ${lightColor}"
                         >
                             ${preset.label}
                         </button>
@@ -1021,7 +1006,7 @@ class HatchCard extends LitElement {
                                 class="action-button"
                                 @click="${() => this._activateScene(scene, hasLight)}"
                                 aria-label="${hasName ? scene.name : 'Scene'}"
-                                style="--scene-color: ${sceneColor}"
+                                style="--control-color: ${sceneColor}"
                             >
                                 ${icon ? html`<ha-icon icon="${icon}"></ha-icon>` : ''}
                                 ${hasName ? html`<span>${scene.name}</span>` : ''}
@@ -1046,7 +1031,7 @@ class HatchCard extends LitElement {
                     <ha-icon icon="mdi:human-child"></ha-icon>
                     <span>Toddler Lock</span>
                 </div>
-                <div class="toggle-switch ${isLocked ? 'locked' : ''}" @click=${this._toggleToddlerLock} role="switch" aria-checked="${isLocked}" tabindex="0">
+                <div class="toggle-switch ${isLocked ? 'locked' : ''}" @click=${this._toggleToddlerLock} @keydown=${this._handleToggleKeydown} role="switch" aria-checked="${isLocked ? 'true' : 'false'}" aria-label="Toddler Lock" tabindex="0">
                     <div class="toggle-thumb">
                         <ha-icon icon="${isLocked ? 'mdi:lock' : 'mdi:lock-open-variant'}"></ha-icon>
                     </div>
@@ -1268,6 +1253,23 @@ class HatchCard extends LitElement {
         e.stopPropagation();
         this._vibrate();
         this._showControls = !this._showControls;
+    }
+
+    _isActivationKey(e) {
+        return e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar';
+    }
+
+    _handleIconKeydown(e) {
+        if (!this._isActivationKey(e) || e.repeat) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this._handleAction(this._config.tap_action);
+    }
+
+    _handleToggleKeydown(e) {
+        if (!this._isActivationKey(e) || e.repeat) return;
+        e.preventDefault();
+        this._toggleToddlerLock();
     }
 
     _handleExpandKeydown(e) {
@@ -1564,8 +1566,27 @@ class HatchCard extends LitElement {
 
     static get styles() {
         return css`
+            /*
+             * Controls follow Home Assistant's theme tokens, mirroring the
+             * built-in tile card features (ha-control-slider/button/select).
+             * Themes or card-mod can override the --hatch-control-* variables.
+             */
             :host {
                 display: block;
+                --_control-height: var(--hatch-control-height, 42px);
+                --_control-radius: var(--hatch-control-border-radius, var(--ha-card-features-border-radius, var(--ha-border-radius-lg, 12px)));
+                --_control-neutral: var(--hatch-control-background, var(--disabled-color, #bdbdbd));
+                --_control-bg-amount: 20%;
+                --_control-hover-amount: 35%;
+                --_control-gap: var(--ha-space-2, 8px);
+                --_focus-color: var(--hatch-focus-color, var(--secondary-text-color));
+                --_on-color-text: var(--text-primary-color, #fff);
+                --_font-family: var(--ha-font-family-body, inherit);
+                --_font-size-s: var(--ha-font-size-s, 12px);
+                --_font-size-m: var(--ha-font-size-m, 14px);
+                --_font-size-l: var(--ha-font-size-l, 16px);
+                --_font-weight-normal: var(--ha-font-weight-normal, 400);
+                --_font-weight-medium: var(--ha-font-weight-medium, 500);
             }
             ha-card {
                 position: relative;
@@ -1608,6 +1629,7 @@ class HatchCard extends LitElement {
                 gap: 4px;
                 flex-shrink: 0;
             }
+            .volume-percent { color: var(--primary-text-color); }
             .vertical-layout { padding: 0 8px; min-height: 120px; position: relative; }
             .vertical-layout.expanded { height: auto; }
             .vertical-layout.has-expand-button { min-height: 120px; }
@@ -1673,8 +1695,17 @@ class HatchCard extends LitElement {
                 justify-content: center;
                 height: 36px;
                 width: 36px;
-                border-radius: 50%;
+                border-radius: var(--ha-tile-icon-border-radius, var(--ha-border-radius-pill, 50%));
+                background-color: color-mix(in srgb, var(--control-color, var(--_control-neutral)) var(--_control-bg-amount), transparent);
                 transition: background-color var(--animation-duration, 250ms);
+            }
+            .icon-container:focus-visible { outline: none; }
+            .icon-container:focus-visible .shape,
+            .icon-container:focus-visible .user-photo {
+                box-shadow: 0 0 0 2px var(--control-color, var(--_focus-color));
+            }
+            @media (hover: hover) {
+                .icon-container:hover .shape { --_control-bg-amount: var(--_control-hover-amount); }
             }
             .shape.vertical { width: 48px; height: 48px; }
             .shape.vertical ha-icon { --mdc-icon-size: 28px; }
@@ -1682,7 +1713,7 @@ class HatchCard extends LitElement {
             .user-photo {
                 height: 36px;
                 width: 36px;
-                border-radius: 50%;
+                border-radius: var(--ha-tile-icon-border-radius, var(--ha-border-radius-pill, 50%));
                 object-fit: cover;
             }
             .user-photo.vertical {
@@ -1690,23 +1721,23 @@ class HatchCard extends LitElement {
                 height: auto;
                 max-height: 48px;
                 object-fit: contain;
-                border-radius: 4px;
+                border-radius: var(--ha-border-radius-sm, 4px);
             }
             .info { overflow: hidden; flex: 1 1 auto; min-width: 0; }
             .name {
-                font-size: 14px;
-                font-weight: 500;
+                font-size: var(--ha-tile-info-primary-font-size, var(--_font-size-m));
+                font-weight: var(--ha-tile-info-primary-font-weight, var(--_font-weight-medium));
                 line-height: 20px;
-                color: var(--primary-text-color);
+                color: var(--ha-tile-info-primary-color, var(--primary-text-color));
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
             .secondary-info {
-                font-size: 12px;
-                font-weight: 400;
+                font-size: var(--ha-tile-info-secondary-font-size, var(--_font-size-s));
+                font-weight: var(--ha-tile-info-secondary-font-weight, var(--_font-weight-normal));
                 line-height: 16px;
-                color: var(--secondary-text-color);
+                color: var(--ha-tile-info-secondary-color, var(--secondary-text-color));
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -1725,8 +1756,8 @@ class HatchCard extends LitElement {
             }
             .expand-button:hover { color: var(--primary-text-color); }
             .expand-button:focus-visible {
-                outline: 2px solid var(--primary-color);
-                outline-offset: 2px;
+                outline: none;
+                box-shadow: 0 0 0 2px var(--_focus-color);
             }
             .expand-icon {
                 display: flex;
@@ -1793,7 +1824,7 @@ class HatchCard extends LitElement {
                 flex-shrink: 0;
             }
             .control-value {
-                font-size: 0.875rem;
+                font-size: var(--_font-size-m);
                 color: var(--secondary-text-color);
                 min-width: 24px;
                 text-align: right;
@@ -1801,20 +1832,20 @@ class HatchCard extends LitElement {
             .time-control .time-label {
                 flex: 1;
                 color: var(--primary-text-color);
-                font-size: 1rem;
+                font-size: var(--_font-size-l);
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
             }
             .time-control .time-input {
-                font-family: inherit;
-                font-size: 0.875rem;
-                height: 40px;
+                font-family: var(--_font-family);
+                font-size: var(--_font-size-m);
+                height: var(--_control-height);
                 box-sizing: border-box;
                 color: var(--primary-text-color);
-                background-color: rgba(var(--rgb-primary-text-color), 0.05);
+                background-color: color-mix(in srgb, var(--_control-neutral) var(--_control-bg-amount), transparent);
                 border: none;
-                border-radius: var(--ha-card-border-radius, 12px);
+                border-radius: var(--_control-radius);
                 padding: 0 12px;
                 text-align: center;
                 cursor: pointer;
@@ -1838,32 +1869,34 @@ class HatchCard extends LitElement {
                 display: none;
                 -webkit-appearance: none;
             }
-            .time-control .time-input:hover {
-                background-color: rgba(var(--rgb-primary-color), 0.12);
+            @media (hover: hover) {
+                .time-control .time-input:hover { --_control-bg-amount: var(--_control-hover-amount); }
             }
-            .time-control .time-input:focus {
-                outline: none;
-                background-color: rgba(var(--rgb-primary-color), 0.12);
-            }
+            .time-control .time-input:focus { outline: none; }
+            .time-control .time-input:focus-visible { box-shadow: 0 0 0 2px var(--_focus-color); }
             .slider-container {
+                --control-color: var(--primary-color);
                 position: relative;
                 flex: 1;
-                height: 40px;
+                height: var(--_control-height);
                 display: flex;
                 align-items: center;
-                border-radius: var(--ha-card-border-radius, 12px);
+                border-radius: var(--_control-radius);
                 cursor: pointer;
                 touch-action: pan-y;
                 -webkit-user-select: none;
                 user-select: none;
                 -webkit-tap-highlight-color: transparent;
             }
+            .slider-container:focus-within {
+                box-shadow: 0 0 0 2px var(--control-color);
+            }
             .slider-container.dragging .slider-fill { transition: none; }
             .slider-track {
                 position: absolute;
                 width: 100%;
-                height: 40px;
-                background-color: rgba(var(--rgb-primary-text-color), 0.05);
+                height: 100%;
+                background-color: color-mix(in srgb, var(--control-color) var(--_control-bg-amount), transparent);
                 border-radius: inherit;
                 overflow: hidden;
             }
@@ -1873,12 +1906,12 @@ class HatchCard extends LitElement {
                 left: 0;
                 height: 100%;
                 transition: width var(--animation-duration, 250ms) ease-out;
-                background-color: var(--primary-color);
+                background-color: var(--control-color);
             }
             .slider-input {
                 position: relative;
                 width: 100%;
-                height: 40px;
+                height: 100%;
                 -webkit-appearance: none;
                 appearance: none;
                 background: transparent;
@@ -1897,40 +1930,54 @@ class HatchCard extends LitElement {
             .slider-input::-moz-range-thumb { width: 0; height: 0; border: 0; }
             .action-buttons, .preset-buttons, .timer-buttons {
                 display: flex;
-                gap: 8px;
+                gap: var(--_control-gap);
                 flex: 1;
             }
             .action-button {
                 flex: 1;
-                height: 40px;
+                height: var(--_control-height);
                 padding: 0 12px;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
                 gap: 6px;
-                background-color: var(--button-bg, rgba(var(--rgb-primary-text-color), 0.05));
-                color: var(--button-fg, var(--primary-text-color));
+                background-color: color-mix(in srgb, var(--_control-neutral) var(--_control-bg-amount), transparent);
+                color: var(--primary-text-color);
                 border: none;
-                border-radius: var(--ha-card-border-radius, 12px);
+                border-radius: var(--_control-radius);
                 cursor: pointer;
-                font-size: 0.875rem;
-                transition: background-color var(--animation-duration, 250ms), color var(--animation-duration, 250ms);
+                font-family: var(--_font-family);
+                font-size: var(--_font-size-m);
+                font-weight: var(--_font-weight-medium);
+                transition: background-color var(--animation-duration, 250ms), color var(--animation-duration, 250ms), box-shadow var(--animation-duration, 250ms);
                 box-sizing: border-box;
+                -webkit-tap-highlight-color: transparent;
             }
-            .action-button:hover {
-                background-color: var(--button-color, rgba(var(--rgb-primary-color), 0.12));
+            @media (hover: hover) {
+                .action-button:hover {
+                    background-color: color-mix(in srgb, var(--control-color, var(--_control-neutral)) var(--_control-hover-amount), transparent);
+                }
+            }
+            .action-button:focus { outline: none; }
+            .action-button:focus-visible {
+                box-shadow: 0 0 0 2px var(--control-color, var(--_focus-color));
+            }
+            .action-button.tinted {
+                background-color: color-mix(in srgb, var(--control-color) var(--_control-bg-amount), transparent);
+                color: var(--control-color);
             }
             .action-button.active {
-                background-color: var(--button-color, var(--primary-color));
-                color: white;
+                background-color: var(--control-color, var(--primary-color));
+                color: var(--_on-color-text);
             }
             .action-button.danger {
-                background-color: var(--error-color);
-                color: white;
+                --control-color: var(--error-color, #db4437);
+                background-color: var(--control-color);
+                color: var(--_on-color-text);
             }
             .action-button.icon-button {
-                flex: 0 0 40px;
-                width: 40px;
+                flex: 0 0 var(--_control-height);
+                width: var(--_control-height);
                 padding: 0;
             }
             .action-button.icon-button ha-icon {
@@ -1938,31 +1985,48 @@ class HatchCard extends LitElement {
             }
             .error-msg, .warning-msg {
                 background-color: var(--error-color, #db4437);
-                color: white;
+                color: var(--_on-color-text);
                 padding: 16px;
-                border-radius: var(--ha-card-border-radius, 12px);
+                border-radius: var(--_control-radius);
+            }
+            .select-wrapper {
+                position: relative;
+                flex: 1;
+                min-width: 0;
+                display: flex;
+                align-items: center;
             }
             .sound-select {
                 width: 100%;
-                height: 40px;
-                border-radius: var(--ha-card-border-radius, 12px);
-                border: 1px solid var(--divider-color);
-                background: var(--ha-card-background, var(--card-background-color));
+                height: var(--_control-height);
+                border-radius: var(--_control-radius);
+                border: none;
+                background-color: color-mix(in srgb, var(--_control-neutral) var(--_control-bg-amount), transparent);
                 color: var(--primary-text-color);
                 -webkit-appearance: none;
                 -moz-appearance: none;
                 appearance: none;
-                padding: 0 44px 0 12px;
-                font-size: 14px;
+                padding: 0 40px 0 12px;
+                font-family: var(--_font-family);
+                font-size: var(--_font-size-m);
                 outline: none;
-                background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'><path fill='rgb(160,160,160)' d='M7 10l5 5 5-5z'/></svg>");
-                background-repeat: no-repeat;
-                background-position: right 14px center;
-                background-size: 16px 16px;
+                cursor: pointer;
+                transition: background-color var(--animation-duration, 250ms);
+            }
+            .sound-select option {
+                background-color: var(--card-background-color, #fff);
+                color: var(--primary-text-color);
             }
             .sound-select::-ms-expand { display: none; }
-            .sound-select:focus {
-                border-color: var(--primary-color);
+            @media (hover: hover) {
+                .sound-select:hover { --_control-bg-amount: var(--_control-hover-amount); }
+            }
+            .sound-select:focus-visible { box-shadow: 0 0 0 2px var(--_focus-color); }
+            .control-row .select-arrow {
+                position: absolute;
+                right: 10px;
+                pointer-events: none;
+                color: var(--secondary-text-color);
             }
             .warning-msg { background-color: var(--warning-color, #ffa600); }
             @media (prefers-reduced-motion: reduce) {
@@ -1981,26 +2045,6 @@ class HatchCard extends LitElement {
                 width: 100%;
                 box-sizing: border-box;
             }
-            .scene-button {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                gap: 4px;
-                padding: 10px;
-                background-color: rgba(var(--rgb-primary-text-color), 0.05);
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                font-size: 12px;
-                color: var(--primary-text-color);
-                transition: all var(--animation-duration, 250ms);
-                width: 100%;
-                height: 100%;
-                box-sizing: border-box;
-            }
-            .scene-button:hover { background-color: var(--scene-color, rgba(var(--rgb-primary-color), 0.1)); }
-            .scene-button ha-icon { color: var(--primary-text-color); --mdc-icon-size: 24px; }
             .toggle-control {
                 justify-content: space-between;
             }
@@ -2014,59 +2058,64 @@ class HatchCard extends LitElement {
             }
             .toggle-label span {
                 color: var(--primary-text-color);
-                font-size: 1rem;
+                font-size: var(--_font-size-l);
             }
             .toggle-switch {
+                --_switch-color: var(--_control-neutral);
+                --_switch-padding: 3px;
+                --_thumb-size: calc(var(--_control-height) - 2 * var(--_switch-padding));
                 position: relative;
-                width: 60px;
-                height: 40px;
-                background-color: rgba(var(--rgb-primary-text-color), 0.05);
-                border-radius: var(--ha-card-border-radius, 12px);
+                width: calc(var(--_control-height) * 1.5);
+                height: var(--_control-height);
+                box-sizing: border-box;
+                padding: var(--_switch-padding);
+                background-color: color-mix(in srgb, var(--_switch-color) var(--_control-bg-amount), transparent);
+                border-radius: var(--_control-radius);
                 cursor: pointer;
-                transition: background-color 0.2s ease-in-out;
+                transition: background-color var(--animation-duration, 250ms) ease-in-out;
                 flex-shrink: 0;
+                -webkit-tap-highlight-color: transparent;
             }
             .toggle-switch.locked {
-                background-color: var(--primary-color);
+                --_switch-color: var(--hatch-switch-on-color, var(--primary-color));
             }
+            .toggle-switch:focus { outline: none; }
+            .toggle-switch:focus-visible { box-shadow: 0 0 0 2px var(--_switch-color); }
             .toggle-thumb {
                 position: relative;
-                top: 2px;
-                left: 2px;
-                width: 36px;
-                height: 36px;
-                background-color: var(--card-background-color, #FFF);
-                border-radius: var(--ha-card-border-radius, 12px);
+                width: var(--_thumb-size);
+                height: var(--_thumb-size);
+                background-color: var(--_switch-color);
+                border-radius: calc(var(--_control-radius) - var(--_switch-padding));
                 display: grid;
                 place-items: center;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-                transition: transform 0.2s ease-in-out;
-                color: var(--secondary-text-color);
+                transition: transform var(--animation-duration, 250ms) ease-in-out, background-color var(--animation-duration, 250ms);
+                color: var(--_on-color-text);
             }
             .toggle-thumb ha-icon {
-                --mdc-icon-size: 26px;
+                color: inherit;
+                --mdc-icon-size: 22px;
                 position: absolute;
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
             }
             .toggle-switch.locked .toggle-thumb {
-                transform: translateX(20px);
-                color: var(--primary-color);
+                transform: translateX(calc(var(--_control-height) * 1.5 - var(--_thumb-size) - 2 * var(--_switch-padding)));
             }
             .battery-indicator {
                 display: flex;
                 align-items: center;
                 gap: 4px;
-                font-size: 12px;
+                font-size: var(--_font-size-s);
                 transition: color 0.2s;
             }
             .battery-indicator ha-icon {
                 --mdc-icon-size: 20px;
             }
             .battery-percent {
-                font-weight: 500;
-                font-size: 14px;
+                font-weight: var(--_font-weight-medium);
+                font-size: var(--_font-size-m);
             }
         `;
     }
@@ -2145,7 +2194,7 @@ class HatchCardEditor extends LitElement {
 
     // Render a text/number input using ha-input on HA 2026.4+ (where
     // ha-textfield is a compat shim that can render empty) and ha-textfield on
-    // older HA. lit-element 2.x has no static-html, so we branch on the tag.
+    // older HA. We branch on the tag rather than using lit's static-html.
     _tf({ id = '', label = '', value = '', type = 'text', min = '', max = '', step = '', helper = '', placeholder = '', change } = {}) {
         const handler = change || ((e) => this._valueChanged(e));
         const v = value ?? '';

@@ -368,6 +368,41 @@ hold_action:
     color_name: green
 ```
 
+The icon is keyboard accessible: focus it with <kbd>Tab</kbd> and press <kbd>Enter</kbd> or <kbd>Space</kbd> to run the `tap_action`.
+
+## Theming
+
+Controls (sliders, buttons, sound selector, time picker, toddler lock) follow your Home Assistant theme the same way the built-in tile card features do. They use these standard theme variables:
+
+| Variable | Used for |
+| :-- | :-- |
+| `ha-card-features-border-radius`, `ha-border-radius-lg` | Control corner radius |
+| `disabled-color` | Background of inactive controls (at 20% opacity) |
+| `primary-color`, `text-primary-color` | Toddler lock, active preset text |
+| `ha-tile-icon-border-radius` | Icon shape |
+| `ha-tile-info-primary-font-size` / `-font-weight` / `-color` | Name |
+| `ha-tile-info-secondary-font-size` / `-font-weight` / `-color` | Secondary info |
+| `ha-font-family-body`, `ha-font-size-*`, `ha-font-weight-*` | Control text |
+
+Sliders and active buttons use the light's current color (or `state-icon-color` / `primary-color` when there is no light color).
+
+To tune the card specifically, set any of these in your theme or with card-mod:
+
+| Variable | Default |
+| :-- | :-- |
+| `hatch-control-height` | `42px` |
+| `hatch-control-border-radius` | `ha-card-features-border-radius` → `ha-border-radius-lg` → `12px` |
+| `hatch-control-background` | `disabled-color` |
+| `hatch-focus-color` | `secondary-text-color` |
+| `hatch-switch-on-color` | `primary-color` |
+
+```yaml
+# Example theme snippet
+my-theme:
+  hatch-control-border-radius: 21px
+  hatch-control-height: 40px
+```
+
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.

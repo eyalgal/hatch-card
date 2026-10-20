@@ -72,6 +72,11 @@ function _formatClockFromSeconds(totalSeconds) {
     return `${m}:${pad(ss)}`;
 }
 
+// Movement (px) after which a press is treated as a scroll/drag instead of a tap.
+const TAP_MOVE_THRESHOLD = 10;
+const SLIDER_DRAG_THRESHOLD = 8;
+const PENDING_VALUE_TIMEOUT = 5000;
+
 const COLOR_NAMES = {
     'red': [255, 0, 0],
     'green': [92, 210, 157],
@@ -131,6 +136,8 @@ class HatchCard extends LitElement {
             _timerRemaining: { type: String },
             _timerPercent: { type: Number },
             _showControls: { type: Boolean },
+            _pending: {},
+            _sliderPreview: {},
         };
     }
 
@@ -144,7 +151,11 @@ class HatchCard extends LitElement {
         this._holdTimer = null;
         this._tapTimer = null;
         this._tapCount = 0;
+        this._press = null;
         this._userProvidedIcon = null;
+        this._pending = {};
+        this._sliderPreview = null;
+        this._sliderDrag = null;
     }
 
     setConfig(config) {
@@ -349,7 +360,7 @@ class HatchCard extends LitElement {
             lightColor = 'var(--primary-color)';
         }
 
-        const volumeLevel = mediaState.attributes.volume_level || 0;
+        const volumeLevel = this._getVolumeLevel();
         const volumePercent = Math.round(volumeLevel * 100);
         const soundMode = mediaState.attributes.sound_mode || 'None';
 
@@ -425,11 +436,10 @@ class HatchCard extends LitElement {
             <div class="content-wrapper">
                 <div class="header">
                     <div class="icon-container"
-                        @mousedown="${this._handleMouseDown}"
-                        @mouseup="${this._handleMouseUp}"
-                        @touchstart="${this._handleTouchStart}"
-                        @touchend="${this._handleTouchEnd}"
-                        @touchcancel="${this._handleTouchCancel}"
+                        @pointerdown="${this._handlePressStart}"
+                        @pointermove="${this._handlePressMove}"
+                        @pointerup="${this._handlePressEnd}"
+                        @pointercancel="${this._cancelPress}"
                         @click="${(e) => e.stopPropagation()}"
                         role="button"
                         tabindex="0"
@@ -473,11 +483,10 @@ class HatchCard extends LitElement {
                     <div class="vertical-icon-container">
                         ${this._config.show_volume_buttons ? this._renderVolumeButton(-Math.abs(this._config.volume_step), 'mdi:volume-minus', lightColor) : ''}
                         <div class="icon-container" 
-                            @mousedown="${this._handleMouseDown}"
-                            @mouseup="${this._handleMouseUp}"
-                            @touchstart="${this._handleTouchStart}"
-                            @touchend="${this._handleTouchEnd}"
-                            @touchcancel="${this._handleTouchCancel}"
+                            @pointerdown="${this._handlePressStart}"
+                            @pointermove="${this._handlePressMove}"
+                            @pointerup="${this._handlePressEnd}"
+                            @pointercancel="${this._cancelPress}"
                         >
                             ${this._renderIconOrPhoto(isOn, lightColor, activeIcon, true)}
                         </div>
@@ -706,87 +715,156 @@ class HatchCard extends LitElement {
     }
 
     _renderBrightnessControl(isOn, lightColor, brightness) {
-        return html`
-            <div class="control-row">
-                <ha-icon icon="mdi:brightness-6"></ha-icon>
-                <div class="slider-container">
-                    <div class="slider-track">
-                        <div 
-                            class="slider-fill" 
-                            style="width: ${(brightness / 255) * 100}%; background-color: ${lightColor};"
-                        ></div>
-                    </div>
-                    <input 
-                        type="range" 
-                        class="slider-input"
-                        min="1" 
-                        max="255" 
-                        .value="${brightness}"
-                        @input="${this._handleBrightnessChange}"
-                    />
-                </div>
-                <span class="control-value">${Math.round((brightness / 255) * 100)}%</span>
-            </div>
-        `;
+        const entityId = this._config.light_entity;
+        const pending = this._getPending('brightness', entityId);
+        return this._renderSlider({
+            key: 'brightness',
+            icon: 'mdi:brightness-6',
+            label: 'Brightness',
+            value: pending !== undefined ? pending : brightness,
+            min: 1,
+            max: 255,
+            color: lightColor,
+            onCommit: (value) => this._setBrightness('brightness', entityId, Math.round(value)),
+        });
     }
 
     _renderVolumeSliderControl(volumeLevel, lightColor) {
+        return this._renderSlider({
+            key: 'volume',
+            icon: 'mdi:volume-high',
+            label: 'Volume',
+            value: volumeLevel,
+            min: 0,
+            max: 1,
+            step: 0.01,
+            color: lightColor,
+            onCommit: (value) => this._setVolume(value),
+        });
+    }
+
+    _renderClockBrightnessControl() {
+        const entityId = this._config.clock_brightness_entity;
+        const clockEntity = this.hass.states[entityId];
+        if (!clockEntity) {
+            return this._renderWarning(`Entity not found: ${entityId}`);
+        }
+        const pending = this._getPending('clock_brightness', entityId);
+        const warmWhite = COLOR_NAMES['warm white'].join(',');
+
+        return this._renderSlider({
+            key: 'clock_brightness',
+            icon: 'mdi:clock-digital',
+            label: 'Clock brightness',
+            value: pending !== undefined ? pending : (clockEntity.attributes.brightness || 0),
+            min: 1,
+            max: 255,
+            color: `rgb(${warmWhite})`,
+            onCommit: (value) => this._setBrightness('clock_brightness', entityId, Math.round(value)),
+        });
+    }
+
+    // Custom pointer handling instead of the native range input's: the native
+    // input jumps to the touched value on touchstart, so a vertical scroll that
+    // begins on a slider changed brightness/volume. Here `touch-action: pan-y`
+    // leaves vertical panning to the browser (which then sends pointercancel),
+    // a drag only starts after clear horizontal movement, and the service is
+    // called once on release. The hidden native input remains for keyboard use.
+    _renderSlider({ key, icon, label, value, min, max, step = 1, color, onCommit }) {
+        const preview = this._sliderPreview;
+        const shown = preview && preview.key === key ? preview.value : value;
+        const percent = Math.max(0, Math.min(100, (shown / max) * 100));
+        const slider = { key, min, max, step, onCommit };
+
         return html`
             <div class="control-row">
-                <ha-icon icon="mdi:volume-high"></ha-icon>
-                <div class="slider-container">
+                <ha-icon icon="${icon}"></ha-icon>
+                <div class="slider-container ${preview && preview.key === key ? 'dragging' : ''}"
+                    @pointerdown="${(e) => this._sliderPointerDown(e, slider)}"
+                    @pointermove="${this._sliderPointerMove}"
+                    @pointerup="${this._sliderPointerUp}"
+                    @pointercancel="${this._sliderPointerCancel}"
+                >
                     <div class="slider-track">
                         <div 
                             class="slider-fill" 
-                            style="width: ${volumeLevel * 100}%; background-color: ${lightColor};"
+                            style="width: ${percent}%; background-color: ${color};"
                         ></div>
                     </div>
                     <input 
                         type="range" 
                         class="slider-input"
-                        min="0" 
-                        max="1" 
-                        step="0.01"
-                        .value="${volumeLevel}"
-                        @input="${(e) => this._setVolume(parseFloat(e.target.value))}"
+                        min="${min}" 
+                        max="${max}" 
+                        step="${step}"
+                        aria-label="${label}"
+                        .value="${String(shown)}"
+                        @change="${(e) => onCommit(parseFloat(e.target.value))}"
                     />
                 </div>
-                <span class="control-value">${Math.round(volumeLevel * 100)}%</span>
+                <span class="control-value">${Math.round(percent)}%</span>
             </div>
         `;
     }
 
-    _renderClockBrightnessControl() {
-        const clockEntity = this.hass.states[this._config.clock_brightness_entity];
-        if (!clockEntity) {
-            return this._renderWarning(`Entity not found: ${this._config.clock_brightness_entity}`);
-        }
-        const brightness = clockEntity.attributes.brightness || 0;
-        const max = 255;
-        const warmWhite = COLOR_NAMES['warm white'].join(',');
+    _sliderValueFromEvent(slider, el, e) {
+        const rect = el.getBoundingClientRect();
+        const ratio = rect.width > 0 ? (e.clientX - rect.left) / rect.width : 0;
+        const raw = Math.max(0, Math.min(1, ratio)) * slider.max;
+        const stepped = Math.round(raw / slider.step) * slider.step;
+        return parseFloat(Math.max(slider.min, Math.min(slider.max, stepped)).toFixed(4));
+    }
 
-        return html`
-            <div class="control-row">
-                <ha-icon icon="mdi:clock-digital"></ha-icon>
-                <div class="slider-container">
-                    <div class="slider-track">
-                        <div 
-                            class="slider-fill" 
-                            style="width: ${(brightness / max) * 100}%; background-color: rgb(${warmWhite});"
-                        ></div>
-                    </div>
-                    <input 
-                        type="range" 
-                        class="slider-input"
-                        min="1" 
-                        max="${max}" 
-                        .value="${brightness}"
-                        @input="${this._handleClockBrightnessChange}"
-                    />
-                </div>
-                <span class="control-value">${Math.round((brightness / max) * 100)}%</span>
-            </div>
-        `;
+    _sliderPointerDown(e, slider) {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        this._sliderDrag = {
+            ...slider,
+            el: e.currentTarget,
+            pointerId: e.pointerId,
+            startX: e.clientX,
+            startY: e.clientY,
+            active: false,
+        };
+        if (e.pointerType === 'mouse') this._startSliderDrag(e);
+    }
+
+    _startSliderDrag(e) {
+        const drag = this._sliderDrag;
+        drag.active = true;
+        try { drag.el.setPointerCapture(drag.pointerId); } catch (_) {}
+        this._sliderPreview = { key: drag.key, value: this._sliderValueFromEvent(drag, drag.el, e) };
+    }
+
+    _sliderPointerMove(e) {
+        const drag = this._sliderDrag;
+        if (!drag || drag.pointerId !== e.pointerId) return;
+        if (!drag.active) {
+            const dx = Math.abs(e.clientX - drag.startX);
+            const dy = Math.abs(e.clientY - drag.startY);
+            if (dy > SLIDER_DRAG_THRESHOLD && dy >= dx) {
+                this._sliderDrag = null;
+                return;
+            }
+            if (dx > SLIDER_DRAG_THRESHOLD) this._startSliderDrag(e);
+            return;
+        }
+        e.preventDefault();
+        this._sliderPreview = { key: drag.key, value: this._sliderValueFromEvent(drag, drag.el, e) };
+    }
+
+    _sliderPointerUp(e) {
+        const drag = this._sliderDrag;
+        if (!drag || drag.pointerId !== e.pointerId) return;
+        this._sliderDrag = null;
+        this._sliderPreview = null;
+        drag.onCommit(this._sliderValueFromEvent(drag, drag.el, e));
+    }
+
+    _sliderPointerCancel(e) {
+        const drag = this._sliderDrag;
+        if (!drag || drag.pointerId !== e.pointerId) return;
+        this._sliderDrag = null;
+        this._sliderPreview = null;
     }
 
     _renderVolumePresetsControl(volumeLevel, lightColor) {
@@ -1079,24 +1157,39 @@ class HatchCard extends LitElement {
         }
     }
 
-    _handleMouseDown(e) { this._handleStart(e); }
-    _handleMouseUp(e) { this._handleEnd(e); }
-    _handleTouchStart(e) { this._handleStart(e); }
-    _handleTouchEnd(e) { this._handleEnd(e); }
-    _handleTouchCancel(e) { this._clearHoldTimer(); }
-
-    _handleStart(e) {
+    // Pointer events fire once per physical press (no emulated mouse events
+    // after touch), and the browser sends pointercancel when a touch turns into
+    // a scroll, so scrolling over the icon never triggers tap/hold actions.
+    _handlePressStart(e) {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
         this._clearHoldTimer();
         this._holdFired = false;
+        this._press = { id: e.pointerId, x: e.clientX, y: e.clientY };
         this._holdTimer = setTimeout(() => {
             this._holdFired = true;
             this._holdTimer = null;
+            this._press = null;
             this._handleAction(this._config.hold_action);
         }, 500);
     }
 
-    _handleEnd(e) {
+    _handlePressMove(e) {
+        const press = this._press;
+        if (!press || press.id !== e.pointerId) return;
+        if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > TAP_MOVE_THRESHOLD) {
+            this._cancelPress();
+        }
+    }
+
+    _cancelPress() {
+        this._clearHoldTimer();
+        this._press = null;
+    }
+
+    _handlePressEnd(e) {
         e.stopPropagation();
+        const press = this._press;
+        this._press = null;
         const hadHoldTimer = !!this._holdTimer;
         this._clearHoldTimer();
 
@@ -1104,9 +1197,15 @@ class HatchCard extends LitElement {
             this._holdFired = false;
             return;
         }
-        if (!hadHoldTimer) return;
-        this._tapCount++;
+        if (!press || press.id !== e.pointerId || !hadHoldTimer) return;
 
+        const doubleTap = this._config.double_tap_action;
+        if (!doubleTap || doubleTap.action === 'none') {
+            this._handleAction(this._config.tap_action);
+            return;
+        }
+
+        this._tapCount++;
         if (this._tapCount === 1) {
             this._tapTimer = setTimeout(() => {
                 this._handleAction(this._config.tap_action);
@@ -1114,7 +1213,7 @@ class HatchCard extends LitElement {
             }, 250);
         } else if (this._tapCount === 2) {
             clearTimeout(this._tapTimer);
-            this._handleAction(this._config.double_tap_action);
+            this._handleAction(doubleTap);
             this._tapCount = 0;
         }
     }
@@ -1179,18 +1278,41 @@ class HatchCard extends LitElement {
     }
 
     _handleVolumeChange(change) {
-        const currentVolume = this.hass.states[this._config.media_player_entity].attributes.volume_level || 0;
+        const currentVolume = this._getVolumeLevel();
         const volumeChange = parseFloat(change) || 0;
         const newVolume = parseFloat((currentVolume + volumeChange).toFixed(2));
         const clampedVolume = Math.max(0, Math.min(1, newVolume));
         this._setVolume(clampedVolume);
     }
 
-    _handleBrightnessChange(e) {
-        const brightness = parseInt(e.target.value);
+    // Optimistic values shown right after a service call, until Home Assistant
+    // reports a new state object for the entity (or the timeout passes). This
+    // keeps sliders from jumping back and lets repeated volume taps accumulate.
+    _setPending(key, entityId, value) {
+        this._pending = { ...this._pending, [key]: { value, stateObj: this.hass.states[entityId], ts: Date.now() } };
+        setTimeout(() => this.requestUpdate(), PENDING_VALUE_TIMEOUT + 50);
+    }
+
+    _getPending(key, entityId) {
+        const pending = this._pending[key];
+        if (!pending) return undefined;
+        if (pending.stateObj !== this.hass.states[entityId]) return undefined;
+        if (Date.now() - pending.ts > PENDING_VALUE_TIMEOUT) return undefined;
+        return pending.value;
+    }
+
+    _getVolumeLevel() {
+        const entityId = this._config.media_player_entity;
+        const pending = this._getPending('volume', entityId);
+        if (pending !== undefined) return pending;
+        return this.hass.states[entityId]?.attributes.volume_level || 0;
+    }
+
+    _setBrightness(key, entityId, brightness) {
         this._vibrate();
+        this._setPending(key, entityId, brightness);
         this.hass.callService("light", "turn_on", {
-            entity_id: this._config.light_entity,
+            entity_id: entityId,
             brightness: brightness,
         });
     }
@@ -1208,6 +1330,7 @@ class HatchCard extends LitElement {
     _setVolume(volume) {
         this._vibrate();
         const volumeFloat = parseFloat(Math.max(0, Math.min(1, volume)).toFixed(2));
+        this._setPending('volume', this._config.media_player_entity, volumeFloat);
         this.hass.callService("media_player", "volume_set", {
             entity_id: this._config.media_player_entity,
             volume_level: volumeFloat,
@@ -1230,15 +1353,6 @@ class HatchCard extends LitElement {
         this._vibrate();
         this.hass.callService("switch", "toggle", {
             entity_id: this._config.toddler_lock_entity,
-        });
-    }
-
-    _handleClockBrightnessChange(e) {
-        const brightness = parseInt(e.target.value);
-        this._vibrate();
-        this.hass.callService("light", "turn_on", {
-            entity_id: this._config.clock_brightness_entity,
-            brightness: brightness,
         });
     }
 
@@ -1547,6 +1661,9 @@ class HatchCard extends LitElement {
                 flex-shrink: 0;
                 cursor: pointer;
                 -webkit-tap-highlight-color: transparent;
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                user-select: none;
             }
             .vertical-layout .icon-container { width: 48px; height: 48px; }
             .shape {
@@ -1735,7 +1852,13 @@ class HatchCard extends LitElement {
                 display: flex;
                 align-items: center;
                 border-radius: var(--ha-card-border-radius, 12px);
+                cursor: pointer;
+                touch-action: pan-y;
+                -webkit-user-select: none;
+                user-select: none;
+                -webkit-tap-highlight-color: transparent;
             }
+            .slider-container.dragging .slider-fill { transition: none; }
             .slider-track {
                 position: absolute;
                 width: 100%;
@@ -1763,6 +1886,7 @@ class HatchCard extends LitElement {
                 z-index: 1;
                 margin: 0;
                 outline: none;
+                pointer-events: none;
             }
             .slider-input::-webkit-slider-thumb {
                 -webkit-appearance: none;

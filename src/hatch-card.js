@@ -1570,9 +1570,13 @@ class HatchCard extends LitElement {
              * Controls follow Home Assistant's theme tokens, mirroring the
              * built-in tile card features (ha-control-slider/button/select).
              * Themes or card-mod can override the --hatch-control-* variables.
+             * Tokens resolve on ha-card (not :host) so card-mod styles, which
+             * apply to ha-card, take effect as well as theme variables.
              */
             :host {
                 display: block;
+            }
+            ha-card {
                 --_control-height: var(--hatch-control-height, 42px);
                 --_control-radius: var(--hatch-control-border-radius, var(--ha-card-features-border-radius, var(--ha-border-radius-lg, 12px)));
                 --_control-neutral: var(--hatch-control-background, var(--disabled-color, #bdbdbd));
@@ -1587,8 +1591,6 @@ class HatchCard extends LitElement {
                 --_font-size-l: var(--ha-font-size-l, 16px);
                 --_font-weight-normal: var(--ha-font-weight-normal, 400);
                 --_font-weight-medium: var(--ha-font-weight-medium, 500);
-            }
-            ha-card {
                 position: relative;
                 transition: all var(--animation-duration, 250ms) ease-in-out;
                 display: flex;

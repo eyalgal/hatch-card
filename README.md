@@ -403,6 +403,18 @@ my-theme:
   hatch-control-height: 40px
 ```
 
+```yaml
+# Example card-mod override for a single card
+type: custom:hatch-card
+media_player_entity: media_player.rest_plus
+card_mod:
+  style: |
+    ha-card {
+      --hatch-control-border-radius: 21px;
+      --hatch-switch-on-color: var(--accent-color);
+    }
+```
+
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
